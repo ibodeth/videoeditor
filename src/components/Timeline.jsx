@@ -36,12 +36,11 @@ export default function Timeline({
   layers, setLayers,
   selectedLayerId, setSelectedLayerId,
   currentTime, setCurrentTime,
-  duration, setDuration: _setDuration, // eslint-disable-line no-unused-vars
-
+  duration,
   mediaItems, onAddLayerFromMedia,
 }) {
   const [pxPerSec, setPxPerSec] = useState(60);
-  const [, setDragOver] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [ctxMenu, setCtxMenu]   = useState(null); // { x, y, layerId }
   const [editingName, setEditingName] = useState(null); // layerId being renamed
 
@@ -202,7 +201,7 @@ export default function Timeline({
       {/* ── Main scrollable area ── */}
       <div
         ref={timelineRef}
-        style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', position: 'relative' }}
+        style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', position: 'relative', outline: dragOver ? '1px dashed #4B8BFF' : 'none' }}
         onDragOver={e => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}

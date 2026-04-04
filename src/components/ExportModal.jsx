@@ -103,14 +103,17 @@ function getTransformAtTime(layer, time) {
   return { x: get('x',0), y: get('y',0), scaleX: get('scaleX',1), scaleY: get('scaleY',1), rotation: get('rotation',0), opacity: get('opacity',1) };
 }
 
+// How long to wait for a 'seeked' event before giving up (ms).
+// Some videos / browsers are slow to dispatch seeked on cross-origin blobs.
+const SEEK_TIMEOUT_MS = 800;
+
 async function seekVideo(vid, targetTime) {
   return new Promise((resolve) => {
     if (Math.abs(vid.currentTime - targetTime) < 0.005) { resolve(); return; }
     const onSeeked = () => { vid.removeEventListener('seeked', onSeeked); resolve(); };
     vid.addEventListener('seeked', onSeeked);
     vid.currentTime = Math.max(0, targetTime);
-    // Fallback timeout in case seeked doesn't fire
-    setTimeout(resolve, 800);
+    setTimeout(resolve, SEEK_TIMEOUT_MS);
   });
 }
 
