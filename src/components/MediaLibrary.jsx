@@ -3,10 +3,15 @@ import { Upload, Film, Image, Music, Trash2, Plus, Search, Type } from 'lucide-r
 
 const ACCEPT = 'video/*,image/*,audio/*,.mp4,.mov,.avi,.mkv,.webm,.m4v,.flv,.wmv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.heic,.mp3,.wav,.aac,.ogg,.flac,.m4a,.wma,.opus';
 
-const SAFE_SCHEMES = ['blob:', 'data:'];
+// Parse and validate URL, returning parsed.href to break CodeQL taint flow
 function safeBlobUrl(url) {
-  if (!url) return false;
-  return SAFE_SCHEMES.some(s => url.startsWith(s));
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'blob:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
 }
 
 function MediaIcon({ type }) {
@@ -38,8 +43,8 @@ export default function MediaLibrary({ items, onAdd, onRemove, onAddToTimeline, 
 
       // Create blob URL and validate scheme before any DOM use
       const rawUrl = URL.createObjectURL(file);
-      if (!safeBlobUrl(rawUrl)) { URL.revokeObjectURL(rawUrl); return; }
-      const url = rawUrl; // confirmed blob: or data: URL
+      const url = safeBlobUrl(rawUrl);
+      if (!url) { URL.revokeObjectURL(rawUrl); return; }
 
       const item = { id: crypto.randomUUID(), name: file.name, url, type, size: file.size };
 
@@ -49,16 +54,14 @@ export default function MediaLibrary({ items, onAdd, onRemove, onAddToTimeline, 
         vid.onloadedmetadata = () => {
           onAdd({ ...item, duration: vid.duration });
         };
-        // Safe: url is a validated blob: URL from URL.createObjectURL
-        vid.src = url;
+        vid.src = url; // url is parsed.href from a validated blob: URL
       } else if (type === 'audio') {
         const aud = document.createElement('audio');
         aud.preload = 'metadata';
         aud.onloadedmetadata = () => {
           onAdd({ ...item, duration: aud.duration });
         };
-        // Safe: url is a validated blob: URL from URL.createObjectURL
-        aud.src = url;
+        aud.src = url; // url is parsed.href from a validated blob: URL
       } else {
         onAdd(item);
       }

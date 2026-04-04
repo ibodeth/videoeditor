@@ -85,6 +85,9 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
       const scaleX = w / compositionWidth;
       const scaleY = h / compositionHeight;
 
+      // Pre-sort layers once (layer order doesn't change during export)
+      const sortedLayers = [...layers].sort((a, b) => b.trackIndex - a.trackIndex);
+
       for (let frame = 0; frame < totalFrames; frame++) {
         if (cancelRef.current) { recorder.stop(); return; }
 
@@ -93,9 +96,9 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, w, h);
 
-        const visible = [...layers]
-          .filter(l => l.visible && time >= l.startTime && time < l.startTime + l.duration)
-          .sort((a, b) => b.trackIndex - a.trackIndex);
+        const visible = sortedLayers.filter(
+          l => l.visible && time >= l.startTime && time < l.startTime + l.duration
+        );
 
         for (const layer of visible) {
           ctx.save();
@@ -117,7 +120,8 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
             const vid  = videoEls[layer.id];
             const srcT = time - layer.startTime + (layer.trimIn ?? 0);
             vid.currentTime = Math.max(0, srcT);
-            await new Promise(r => { vid.onseeked = r; setTimeout(r, 100); });
+            // Use 16ms timeout (one frame) instead of 100ms to avoid artificial delay
+            await new Promise(r => { vid.onseeked = r; setTimeout(r, 16); });
             if (vid.readyState >= 2) ctx.drawImage(vid, -hw, -hh, compositionWidth, compositionHeight);
           } else if (layer.type === 'photo' && imageCache[layer.url]) {
             const img = imageCache[layer.url];

@@ -178,7 +178,7 @@ export default function Timeline({
   if (pxPerSec >= 120) tickStep = 0.25;
   const ticks = [];
   for (let t = 0; t <= duration + tickStep; t += tickStep) {
-    ticks.push(parseFloat(t.toFixed(3)));
+    ticks.push(Math.round(t * 1000) / 1000);
   }
 
   const playheadX = currentTime * pxPerSec;
