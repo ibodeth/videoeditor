@@ -1,85 +1,64 @@
-import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
 import { EFFECTS } from './effects.js';
 
 const CATEGORIES = [
-  { id: 'all',      label: 'All' },
-  { id: 'filter',   label: 'Filters' },
-  { id: 'adjust',   label: 'Adjust' },
-  { id: 'creative', label: 'Creative' },
+  { id: 'filter',   label: 'Filters'    },
+  { id: 'adjust',   label: 'Adjustments'},
+  { id: 'creative', label: 'Creative'   },
 ];
 
-function Slider({ label, value, min, max, onChange, unit }) {
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-xs text-white/50">{label}</span>
-        <span className="text-xs text-white/40 font-mono">{value}{unit}</span>
-      </div>
-      <input
-        type="range" min={min} max={max} value={value}
-        onChange={e => onChange(Number(e.target.value))}
-      />
-    </div>
-  );
-}
+export default function EffectsPanel({ selectedLayer, onUpdateLayer }) {
+  const currentCss = (selectedLayer?.effects && selectedLayer.effects[0]) || 'none';
 
-export default function EffectsPanel({ activeEffect, onEffectSelect, brightness, setBrightness, contrast, setContrast, saturation, setSaturation, opacity, setOpacity }) {
-  const [category, setCategory] = useState('all');
-
-  const shown = EFFECTS.filter(e => category === 'all' || e.category === category);
+  function applyEffect(fx) {
+    if (!selectedLayer) return;
+    onUpdateLayer(selectedLayer.id, { effects: fx.id === 'none' ? [] : [fx.css] });
+  }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-3 py-2.5 border-b border-white/6 shrink-0">
-        <span className="text-xs font-semibold text-white/50 uppercase tracking-wider flex items-center gap-1.5">
-          <Sparkles size={11} /> Effects
-        </span>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div style={{ padding: '6px 8px', borderBottom: '1px solid #2a2a2a', flexShrink: 0 }}>
+        <span style={{ fontSize: 10, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Effects</span>
       </div>
 
-      {/* Category tabs */}
-      <div className="flex gap-1 px-3 py-2 shrink-0">
-        {CATEGORIES.map(c => (
-          <button
-            key={c.id}
-            onClick={() => setCategory(c.id)}
-            className={`px-2 py-0.5 rounded text-xs transition-all ${
-              category === c.id ? 'bg-violet-600/30 text-violet-300' : 'text-white/40 hover:text-white/60'
-            }`}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Effect chips */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3">
-        <div className="grid grid-cols-3 gap-1.5">
-          {shown.map(effect => (
-            <button
-              key={effect.id}
-              onClick={() => onEffectSelect(effect)}
-              className={`effect-chip flex flex-col items-center gap-1 py-2 px-1 rounded-lg border text-xs transition-all ${
-                activeEffect?.id === effect.id
-                  ? 'border-violet-500 bg-violet-600/20 text-violet-200'
-                  : 'border-white/8 bg-white/3 text-white/60 hover:bg-white/8 hover:border-white/16'
-              }`}
-            >
-              <span className="text-base leading-none">{effect.icon}</span>
-              <span className="truncate w-full text-center text-xs">{effect.label}</span>
-            </button>
+      {!selectedLayer ? (
+        <div style={{ padding: 12, color: '#444', fontSize: 11, textAlign: 'center' }}>
+          Select a layer to apply effects
+        </div>
+      ) : (
+        <div style={{ flex: 1, overflowY: 'auto', padding: 6 }}>
+          {CATEGORIES.map(cat => (
+            <div key={cat.id} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, color: '#555', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '3px 2px 5px' }}>
+                {cat.label}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
+                {EFFECTS.filter(f => f.category === cat.id || (cat.id === 'filter' && f.id === 'none')).map(fx => {
+                  const active = (fx.id === 'none' && currentCss === 'none') || (fx.css === currentCss);
+                  return (
+                    <button
+                      key={fx.id}
+                      onClick={() => applyEffect(fx)}
+                      title={fx.label}
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                        padding: '4px 2px', borderRadius: 3, cursor: 'pointer', border: 'none',
+                        background: active ? '#2a3a5a' : '#222',
+                        outline: active ? '1px solid #4B8BFF' : '1px solid transparent',
+                        transition: 'all 0.1s',
+                      }}
+                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#2a2a2a'; }}
+                      onMouseLeave={e => { if (!active) e.currentTarget.style.background = '#222'; }}
+                    >
+                      <span style={{ fontSize: 14 }}>{fx.icon}</span>
+                      <span style={{ fontSize: 9, color: active ? '#6aadff' : '#888', textAlign: 'center', lineHeight: 1.2 }}>{fx.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           ))}
         </div>
-
-        {/* Manual adjustments */}
-        <div className="mt-4 space-y-3">
-          <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">Adjustments</p>
-          <Slider label="Brightness" value={brightness} min={0} max={200} onChange={setBrightness} unit="%" />
-          <Slider label="Contrast"   value={contrast}   min={0} max={200} onChange={setContrast}   unit="%" />
-          <Slider label="Saturation" value={saturation} min={0} max={200} onChange={setSaturation} unit="%" />
-          <Slider label="Opacity"    value={opacity}    min={0} max={100} onChange={setOpacity}    unit="%" />
-        </div>
-      </div>
+      )}
     </div>
   );
 }
