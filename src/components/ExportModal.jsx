@@ -1,25 +1,90 @@
 import { useState, useRef } from 'react';
-import { X, Download, Film, AlertCircle } from 'lucide-react';
+import { X, Download, Film, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
-const RESOLUTIONS = {
-  '4k':    { label: '4K (3840×2160)',   w: 3840, h: 2160 },
-  '1080p': { label: '1080p (1920×1080)',w: 1920, h: 1080 },
-  '720p':  { label: '720p (1280×720)',  w: 1280, h: 720  },
-  '480p':  { label: '480p (854×480)',   w: 854,  h: 480  },
-};
+// ─── Platform presets ──────────────────────────────────────────────────────────
+const PRESETS = [
+  // YouTube
+  { id: 'yt-4k',        group: 'YouTube',    label: 'YouTube 4K',             icon: '▶', w: 3840, h: 2160, fps: 30,  ratio: '16:9' },
+  { id: 'yt-1080',      group: 'YouTube',    label: 'YouTube 1080p',          icon: '▶', w: 1920, h: 1080, fps: 30,  ratio: '16:9' },
+  { id: 'yt-720',       group: 'YouTube',    label: 'YouTube 720p',           icon: '▶', w: 1280, h: 720,  fps: 30,  ratio: '16:9' },
+  { id: 'yt-shorts',    group: 'YouTube',    label: 'YouTube Shorts',         icon: '▶', w: 1080, h: 1920, fps: 60,  ratio: '9:16' },
+  // TikTok
+  { id: 'tt-1080',      group: 'TikTok',     label: 'TikTok HD',              icon: '♪', w: 1080, h: 1920, fps: 60,  ratio: '9:16' },
+  { id: 'tt-720',       group: 'TikTok',     label: 'TikTok Standard',        icon: '♪', w: 720,  h: 1280, fps: 30,  ratio: '9:16' },
+  // Instagram
+  { id: 'ig-reels',     group: 'Instagram',  label: 'Reels / Story',          icon: '◈', w: 1080, h: 1920, fps: 30,  ratio: '9:16' },
+  { id: 'ig-portrait',  group: 'Instagram',  label: 'Feed Portrait (4:5)',    icon: '◈', w: 1080, h: 1350, fps: 30,  ratio: '4:5'  },
+  { id: 'ig-square',    group: 'Instagram',  label: 'Feed Square (1:1)',      icon: '◈', w: 1080, h: 1080, fps: 30,  ratio: '1:1'  },
+  { id: 'ig-landscape', group: 'Instagram',  label: 'Feed Landscape (1.91:1)',icon: '◈', w: 1080, h: 566,  fps: 30,  ratio: '1.91:1'},
+  // Twitter / X
+  { id: 'tw-1080',      group: 'Twitter/X',  label: 'Twitter/X Landscape',   icon: '✕', w: 1920, h: 1080, fps: 30,  ratio: '16:9' },
+  { id: 'tw-square',    group: 'Twitter/X',  label: 'Twitter/X Square',      icon: '✕', w: 1080, h: 1080, fps: 30,  ratio: '1:1'  },
+  { id: 'tw-portrait',  group: 'Twitter/X',  label: 'Twitter/X Portrait',    icon: '✕', w: 1080, h: 1350, fps: 30,  ratio: '4:5'  },
+  // Vimeo
+  { id: 'vi-4k',        group: 'Vimeo',      label: 'Vimeo 4K',              icon: '⬡', w: 3840, h: 2160, fps: 30,  ratio: '16:9' },
+  { id: 'vi-1080',      group: 'Vimeo',      label: 'Vimeo 1080p',           icon: '⬡', w: 1920, h: 1080, fps: 30,  ratio: '16:9' },
+  // Cinema / Film
+  { id: 'cin-4k-dci',   group: 'Cinema',     label: 'DCI 4K (4096×2160)',    icon: '🎞', w: 4096, h: 2160, fps: 24,  ratio: '17:9' },
+  { id: 'cin-2k',       group: 'Cinema',     label: 'DCI 2K (2048×1080)',    icon: '🎞', w: 2048, h: 1080, fps: 24,  ratio: '17:9' },
+  { id: 'cin-1080-24',  group: 'Cinema',     label: '1080p Cinematic (24fps)',icon: '🎞',w: 1920, h: 1080, fps: 24,  ratio: '16:9' },
+  // Custom
+  { id: 'custom',       group: 'Custom',     label: 'Custom…',               icon: '⚙', w: 1920, h: 1080, fps: 30,  ratio: '' },
+];
+
+const PRESET_GROUPS = [...new Set(PRESETS.map(p => p.group))];
+
 const QUALITIES = {
-  'High':   8_000_000,
-  'Medium': 4_000_000,
-  'Low':    1_500_000,
+  'Lossless (Best)': 20_000_000,
+  'High':             8_000_000,
+  'Medium':           4_000_000,
+  'Low':              1_500_000,
+  'Draft':              500_000,
 };
+
+const FPS_OPTIONS = [12, 24, 25, 29.97, 30, 48, 50, 59.94, 60];
+
+// Detect which MIME types the browser supports
+function detectMimeTypes() {
+  const candidates = [
+    { label: 'WebM VP9 (Best)', mime: 'video/webm;codecs=vp9' },
+    { label: 'WebM VP8',        mime: 'video/webm;codecs=vp8' },
+    { label: 'WebM H.264',      mime: 'video/webm;codecs=h264' },
+    { label: 'MP4 H.264',       mime: 'video/mp4;codecs=h264' },
+    { label: 'WebM (auto)',     mime: 'video/webm' },
+  ];
+  return candidates.filter(c => {
+    try { return MediaRecorder.isTypeSupported(c.mime); } catch { return false; }
+  });
+}
+
+const SUPPORTED_MIMES = detectMimeTypes();
 
 export default function ExportModal({ onClose, layers, compositionDuration, compositionWidth, compositionHeight }) {
-  const [resolution, setResolution] = useState('1080p');
-  const [quality,    setQuality]    = useState('Medium');
-  const [progress,   setProgress]   = useState(0);        // 0–1
-  const [status,     setStatus]     = useState('idle');    // idle | exporting | done | error
+  const defaultPreset = PRESETS.find(p => p.id === 'yt-1080');
+  const [selectedPresetId, setSelectedPresetId] = useState('yt-1080');
+  const [customW,    setCustomW]    = useState(1920);
+  const [customH,    setCustomH]    = useState(1080);
+  const [fps,        setFps]        = useState(defaultPreset.fps);
+  const [quality,    setQuality]    = useState('High');
+  const [mimeChoice, setMimeChoice] = useState(SUPPORTED_MIMES[0]?.mime ?? 'video/webm');
+  const [progress,   setProgress]   = useState(0);
+  const [status,     setStatus]     = useState('idle');
   const [errMsg,     setErrMsg]     = useState('');
+  const [showGroups, setShowGroups] = useState({});
   const cancelRef = useRef(false);
+
+  const preset = PRESETS.find(p => p.id === selectedPresetId) ?? PRESETS[0];
+  const outW = selectedPresetId === 'custom' ? customW : preset.w;
+  const outH = selectedPresetId === 'custom' ? customH : preset.h;
+
+  function selectPreset(p) {
+    setSelectedPresetId(p.id);
+    if (p.id !== 'custom') setFps(p.fps);
+  }
+
+  function toggleGroup(g) {
+    setShowGroups(prev => ({ ...prev, [g]: !prev[g] }));
+  }
 
   async function handleExport() {
     cancelRef.current = false;
@@ -27,8 +92,9 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
     setProgress(0);
 
     try {
-      const { w, h } = RESOLUTIONS[resolution];
-      const fps = 30;
+      const w      = Math.max(2, Math.round(outW));
+      const h      = Math.max(2, Math.round(outH));
+      const fpsVal = Number(fps) || 30;
 
       // Offscreen canvas
       const canvas = document.createElement('canvas');
@@ -36,20 +102,17 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
       canvas.height = h;
       const ctx = canvas.getContext('2d');
 
-      // Check MediaRecorder support
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : MediaRecorder.isTypeSupported('video/webm')
-          ? 'video/webm'
-          : null;
-
-      if (!mimeType) throw new Error('MediaRecorder not supported in this browser.');
+      // Use user-selected mime type, fall back gracefully
+      const activeMime = (mimeChoice && MediaRecorder.isTypeSupported(mimeChoice))
+        ? mimeChoice
+        : SUPPORTED_MIMES[0]?.mime ?? null;
+      if (!activeMime) throw new Error('MediaRecorder is not supported in this browser.');
 
       // Set up recorder
-      const stream = canvas.captureStream(fps);
+      const stream = canvas.captureStream(fpsVal);
       const chunks = [];
       const recorder = new MediaRecorder(stream, {
-        mimeType,
+        mimeType: activeMime,
         videoBitsPerSecond: QUALITIES[quality],
       });
       recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
@@ -81,7 +144,7 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
 
       recorder.start();
 
-      const totalFrames = Math.ceil(compositionDuration * fps);
+      const totalFrames = Math.ceil(compositionDuration * fpsVal);
       const scaleX = w / compositionWidth;
       const scaleY = h / compositionHeight;
 
@@ -91,7 +154,7 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
       for (let frame = 0; frame < totalFrames; frame++) {
         if (cancelRef.current) { recorder.stop(); return; }
 
-        const time = frame / fps;
+        const time = frame / fpsVal;
 
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, w, h);
@@ -120,7 +183,6 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
             const vid  = videoEls[layer.id];
             const srcT = time - layer.startTime + (layer.trimIn ?? 0);
             vid.currentTime = Math.max(0, srcT);
-            // Use 16ms timeout (one frame) instead of 100ms to avoid artificial delay
             await new Promise(r => { vid.onseeked = r; setTimeout(r, 16); });
             if (vid.readyState >= 2) ctx.drawImage(vid, -hw, -hh, compositionWidth, compositionHeight);
           } else if (layer.type === 'photo' && imageCache[layer.url]) {
@@ -138,18 +200,22 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
         }
 
         setProgress((frame + 1) / totalFrames);
-        // Yield to browser for progress bar updates (minimal delay)
         await new Promise(r => setTimeout(r, 0));
       }
 
       recorder.stop();
       await new Promise(r => { recorder.onstop = r; });
 
-      const blob = new Blob(chunks, { type: 'video/webm' });
+      // Pick file extension from mime type
+      const ext = activeMime.startsWith('video/mp4') ? 'mp4'
+                : activeMime.startsWith('video/webm') ? 'webm'
+                : 'video';
+      const presetLabel = preset.id !== 'custom' ? preset.label.replace(/[^a-zA-Z0-9]/g, '_') : 'custom';
+      const blob = new Blob(chunks, { type: activeMime });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href     = url;
-      a.download = `videoforge-export-${Date.now()}.webm`;
+      a.download = `videoforge_${presetLabel}_${fpsVal}fps_${Date.now()}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
 
@@ -167,114 +233,204 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
     setProgress(0);
   }
 
+  // ── Shared styles ──
+  const selStyle = { display: 'block', marginTop: 4, width: '100%', background: '#111', border: '1px solid #333', borderRadius: 3, color: '#ccc', padding: '5px 8px', fontSize: 12, outline: 'none' };
+  const labelStyle = { fontSize: 11, color: '#888' };
+  const sectionHead = { fontSize: 10, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '10px 0 4px' };
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} className="fade-in">
-      <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, width: 360, padding: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.8)' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} className="fade-in">
+      <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8, width: 460, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.9)' }}>
+
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, gap: 8 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 6, background: '#1a3a6a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Film size={14} style={{ color: '#6aadff' }} />
+        <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #2a2a2a', gap: 8, flexShrink: 0 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 5, background: '#1a3a6a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Film size={13} style={{ color: '#6aadff' }} />
           </div>
-          <span style={{ fontWeight: 600, color: '#ddd', flex: 1 }}>Export Composition</span>
+          <span style={{ fontWeight: 600, color: '#ddd', flex: 1, fontSize: 13 }}>Export Composition</span>
           <button onClick={onClose} disabled={status === 'exporting'} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 4 }}>
             <X size={14} />
           </button>
         </div>
 
-        {status === 'done' ? (
-          <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#1a3a2a', border: '1px solid #2a5a3a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-              <Download size={20} style={{ color: '#44cc88' }} />
-            </div>
-            <p style={{ color: '#ccc', fontSize: 13, marginBottom: 4 }}>Export Complete!</p>
-            <p style={{ color: '#666', fontSize: 11, marginBottom: 16 }}>Your WebM file has been downloaded</p>
-            <button onClick={onClose} style={{ padding: '6px 20px', background: '#2a2a2a', border: '1px solid #333', borderRadius: 4, color: '#aaa', cursor: 'pointer', fontSize: 12 }}>
-              Close
-            </button>
-          </div>
-        ) : status === 'error' ? (
-          <div style={{ textAlign: 'center', padding: '12px 0' }}>
-            <AlertCircle size={32} style={{ color: '#ff6655', margin: '0 auto 8px', display: 'block' }} />
-            <p style={{ color: '#ff8877', fontSize: 12, marginBottom: 12 }}>{errMsg}</p>
-            <button onClick={() => setStatus('idle')} style={{ padding: '5px 16px', background: '#2a2a2a', border: '1px solid #333', borderRadius: 4, color: '#aaa', cursor: 'pointer', fontSize: 12 }}>
-              Back
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* Settings */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-              <label style={{ fontSize: 11, color: '#888' }}>
-                Resolution
-                <select
-                  value={resolution}
-                  onChange={e => setResolution(e.target.value)}
-                  disabled={status === 'exporting'}
-                  style={{ display: 'block', marginTop: 4, width: '100%', background: '#111', border: '1px solid #333', borderRadius: 3, color: '#ccc', padding: '5px 8px', fontSize: 12, outline: 'none' }}
-                >
-                  {Object.entries(RESOLUTIONS).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label style={{ fontSize: 11, color: '#888' }}>
-                Quality
-                <select
-                  value={quality}
-                  onChange={e => setQuality(e.target.value)}
-                  disabled={status === 'exporting'}
-                  style={{ display: 'block', marginTop: 4, width: '100%', background: '#111', border: '1px solid #333', borderRadius: 3, color: '#ccc', padding: '5px 8px', fontSize: 12, outline: 'none' }}
-                >
-                  {Object.keys(QUALITIES).map(q => <option key={q} value={q}>{q}</option>)}
-                </select>
-              </label>
+        {/* Scrollable body */}
+        <div style={{ overflow: 'auto', padding: 16, flex: 1 }}>
 
-              <div style={{ fontSize: 11, color: '#555' }}>
-                Format: <span style={{ color: '#888' }}>WebM (VP9)</span>
-                {' · '}Duration: <span style={{ color: '#888' }}>{compositionDuration}s</span>
-                {' · '}Layers: <span style={{ color: '#888' }}>{layers.length}</span>
+          {status === 'done' ? (
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#1a3a2a', border: '1px solid #2a5a3a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+                <Download size={22} style={{ color: '#44cc88' }} />
               </div>
+              <p style={{ color: '#ccc', fontSize: 13, marginBottom: 4, fontWeight: 600 }}>Export Complete!</p>
+              <p style={{ color: '#555', fontSize: 11, marginBottom: 20 }}>File downloaded to your browser</p>
+              <button onClick={onClose} style={{ padding: '6px 24px', background: '#252525', border: '1px solid #333', borderRadius: 4, color: '#aaa', cursor: 'pointer', fontSize: 12 }}>
+                Close
+              </button>
             </div>
 
-            {/* Progress */}
-            {status === 'exporting' && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, color: '#888' }}>Rendering…</span>
-                  <span style={{ fontSize: 11, color: '#aaa', fontFamily: 'monospace' }}>{Math.round(progress * 100)}%</span>
-                </div>
-                <div style={{ height: 6, background: '#2a2a2a', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ width: `${progress * 100}%`, height: '100%', background: 'linear-gradient(90deg, #4B8BFF, #7B55EE)', borderRadius: 3, transition: 'width 0.2s' }} />
-                </div>
-              </div>
-            )}
+          ) : status === 'error' ? (
+            <div style={{ textAlign: 'center', padding: '12px 0' }}>
+              <AlertCircle size={32} style={{ color: '#ff6655', margin: '0 auto 8px', display: 'block' }} />
+              <p style={{ color: '#ff8877', fontSize: 12, marginBottom: 12 }}>{errMsg}</p>
+              <button onClick={() => setStatus('idle')} style={{ padding: '5px 16px', background: '#2a2a2a', border: '1px solid #333', borderRadius: 4, color: '#aaa', cursor: 'pointer', fontSize: 12 }}>
+                Back
+              </button>
+            </div>
 
-            {/* Buttons */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              {status === 'exporting' ? (
-                <button onClick={handleCancel} style={{ flex: 1, padding: '7px', background: '#3a1a1a', border: '1px solid #5a2a2a', borderRadius: 4, color: '#ff8877', cursor: 'pointer', fontSize: 12 }}>
+          ) : (
+            <>
+              {/* ── Platform Presets ── */}
+              <p style={sectionHead}>Platform Preset</p>
+              <div style={{ border: '1px solid #2a2a2a', borderRadius: 4, overflow: 'hidden', marginBottom: 4 }}>
+                {PRESET_GROUPS.map(group => {
+                  const groupPresets = PRESETS.filter(p => p.group === group);
+                  const isOpen = showGroups[group] !== false; // default open
+                  return (
+                    <div key={group}>
+                      <button
+                        onClick={() => toggleGroup(group)}
+                        style={{ width: '100%', textAlign: 'left', background: '#1e1e1e', border: 'none', borderBottom: '1px solid #2a2a2a', padding: '5px 10px', color: '#888', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+                      >
+                        <span>{group}</span>
+                        {isOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                      </button>
+                      {isOpen && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+                          {groupPresets.map(p => {
+                            const active = selectedPresetId === p.id;
+                            return (
+                              <button
+                                key={p.id}
+                                onClick={() => selectPreset(p)}
+                                disabled={status === 'exporting'}
+                                style={{
+                                  background: active ? '#1a3050' : 'transparent',
+                                  border: 'none',
+                                  borderBottom: '1px solid #222',
+                                  borderRight: '1px solid #222',
+                                  padding: '6px 10px',
+                                  textAlign: 'left',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 1,
+                                }}
+                              >
+                                <span style={{ color: active ? '#6aadff' : '#bbb', fontSize: 11, fontWeight: active ? 600 : 400 }}>{p.label}</span>
+                                {p.id !== 'custom' && (
+                                  <span style={{ color: active ? '#4a8acc' : '#555', fontSize: 9, fontFamily: 'monospace' }}>
+                                    {p.w}×{p.h} · {p.ratio} · {p.fps}fps
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Custom dimensions (shown when Custom is selected) */}
+              {selectedPresetId === 'custom' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+                  <label style={labelStyle}>
+                    Width (px)
+                    <input type="number" min={2} max={7680} value={customW} onChange={e => setCustomW(Number(e.target.value))} disabled={status === 'exporting'} style={{ ...selStyle, marginTop: 4 }} />
+                  </label>
+                  <label style={labelStyle}>
+                    Height (px)
+                    <input type="number" min={2} max={4320} value={customH} onChange={e => setCustomH(Number(e.target.value))} disabled={status === 'exporting'} style={{ ...selStyle, marginTop: 4 }} />
+                  </label>
+                </div>
+              )}
+
+              {/* ── FPS, Quality, Format row ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 12 }}>
+                <label style={labelStyle}>
+                  Frame Rate
+                  <select value={fps} onChange={e => setFps(Number(e.target.value))} disabled={status === 'exporting'} style={{ ...selStyle, marginTop: 4 }}>
+                    {FPS_OPTIONS.map(f => <option key={f} value={f}>{f} fps</option>)}
+                  </select>
+                </label>
+                <label style={labelStyle}>
+                  Quality
+                  <select value={quality} onChange={e => setQuality(e.target.value)} disabled={status === 'exporting'} style={{ ...selStyle, marginTop: 4 }}>
+                    {Object.keys(QUALITIES).map(q => <option key={q} value={q}>{q}</option>)}
+                  </select>
+                </label>
+                <label style={labelStyle}>
+                  Codec / Format
+                  {SUPPORTED_MIMES.length === 0 ? (
+                    <span style={{ display: 'block', marginTop: 4, color: '#ff6655', fontSize: 11 }}>Not supported</span>
+                  ) : (
+                    <select value={mimeChoice} onChange={e => setMimeChoice(e.target.value)} disabled={status === 'exporting'} style={{ ...selStyle, marginTop: 4 }}>
+                      {SUPPORTED_MIMES.map(m => <option key={m.mime} value={m.mime}>{m.label}</option>)}
+                    </select>
+                  )}
+                </label>
+              </div>
+
+              {/* Summary line */}
+              <div style={{ marginTop: 10, padding: '6px 8px', background: '#141414', borderRadius: 3, border: '1px solid #2a2a2a', fontSize: 10, color: '#666', lineHeight: '1.6', fontFamily: 'monospace' }}>
+                <span style={{ color: '#888' }}>{outW}×{outH}</span>
+                {preset.ratio && <span> · {preset.ratio}</span>}
+                {' · '}<span style={{ color: '#888' }}>{fps} fps</span>
+                {' · '}{SUPPORTED_MIMES.find(m => m.mime === mimeChoice)?.label ?? mimeChoice}
+                {' · '}{compositionDuration}s · {layers.length} layer{layers.length !== 1 ? 's' : ''}
+              </div>
+
+              {/* Progress bar */}
+              {status === 'exporting' && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 11, color: '#888' }}>Rendering frames…</span>
+                    <span style={{ fontSize: 11, color: '#aaa', fontFamily: 'monospace' }}>{Math.round(progress * 100)}%</span>
+                  </div>
+                  <div style={{ height: 6, background: '#222', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${progress * 100}%`, height: '100%', background: 'linear-gradient(90deg, #4B8BFF, #7B55EE)', borderRadius: 3, transition: 'width 0.15s' }} />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer buttons */}
+        {status !== 'done' && status !== 'error' && (
+          <div style={{ padding: '12px 16px', borderTop: '1px solid #222', display: 'flex', gap: 8, flexShrink: 0 }}>
+            {status === 'exporting' ? (
+              <button onClick={handleCancel} style={{ flex: 1, padding: '7px', background: '#3a1a1a', border: '1px solid #5a2a2a', borderRadius: 4, color: '#ff8877', cursor: 'pointer', fontSize: 12 }}>
+                Cancel
+              </button>
+            ) : (
+              <>
+                <button onClick={onClose} style={{ padding: '7px 16px', background: '#222', border: '1px solid #333', borderRadius: 4, color: '#888', cursor: 'pointer', fontSize: 12 }}>
                   Cancel
                 </button>
-              ) : (
-                <>
-                  <button onClick={onClose} style={{ padding: '7px 16px', background: '#222', border: '1px solid #333', borderRadius: 4, color: '#888', cursor: 'pointer', fontSize: 12 }}>
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleExport}
-                    disabled={layers.length === 0}
-                    style={{ flex: 1, padding: '7px', background: layers.length === 0 ? '#1a1a2a' : '#1a3a6a', border: '1px solid #2a5aaa', borderRadius: 4, color: layers.length === 0 ? '#444' : '#6aadff', cursor: layers.length === 0 ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                  >
-                    <Download size={13} /> Export Video
-                  </button>
-                </>
-              )}
-            </div>
-
-            {layers.length === 0 && (
-              <p style={{ fontSize: 10, color: '#664444', marginTop: 8, textAlign: 'center' }}>Add layers to the timeline before exporting</p>
+                <button
+                  onClick={handleExport}
+                  disabled={layers.length === 0 || SUPPORTED_MIMES.length === 0}
+                  style={{
+                    flex: 1, padding: '7px', borderRadius: 4, fontSize: 12, fontWeight: 600,
+                    cursor: (layers.length === 0 || SUPPORTED_MIMES.length === 0) ? 'not-allowed' : 'pointer',
+                    background: (layers.length === 0 || SUPPORTED_MIMES.length === 0) ? '#1a1a2a' : '#1a3a6a',
+                    border: '1px solid #2a5aaa',
+                    color: (layers.length === 0 || SUPPORTED_MIMES.length === 0) ? '#444' : '#6aadff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}
+                >
+                  <Download size={13} />
+                  Export · {outW}×{outH} · {fps}fps
+                </button>
+              </>
             )}
-          </>
+          </div>
+        )}
+
+        {status !== 'done' && status !== 'error' && layers.length === 0 && (
+          <p style={{ fontSize: 10, color: '#664444', textAlign: 'center', padding: '0 16px 10px' }}>Add layers to the timeline before exporting</p>
         )}
       </div>
     </div>
