@@ -24,8 +24,8 @@ const PRESETS = [
   { id: 'vi-4k',        group: 'Vimeo',      label: 'Vimeo 4K',              icon: '⬡', w: 3840, h: 2160, fps: 30,  ratio: '16:9' },
   { id: 'vi-1080',      group: 'Vimeo',      label: 'Vimeo 1080p',           icon: '⬡', w: 1920, h: 1080, fps: 30,  ratio: '16:9' },
   // Cinema / Film
-  { id: 'cin-4k-dci',   group: 'Cinema',     label: 'DCI 4K (4096×2160)',    icon: '🎞', w: 4096, h: 2160, fps: 24,  ratio: '17:9' },
-  { id: 'cin-2k',       group: 'Cinema',     label: 'DCI 2K (2048×1080)',    icon: '🎞', w: 2048, h: 1080, fps: 24,  ratio: '17:9' },
+  { id: 'cin-4k-dci',   group: 'Cinema',     label: 'DCI 4K (4096×2160)',    icon: '🎞', w: 4096, h: 2160, fps: 24,  ratio: '1.9:1' },
+  { id: 'cin-2k',       group: 'Cinema',     label: 'DCI 2K (2048×1080)',    icon: '🎞', w: 2048, h: 1080, fps: 24,  ratio: '1.9:1' },
   { id: 'cin-1080-24',  group: 'Cinema',     label: '1080p Cinematic (24fps)',icon: '🎞',w: 1920, h: 1080, fps: 24,  ratio: '16:9' },
   // Custom
   { id: 'custom',       group: 'Custom',     label: 'Custom…',               icon: '⚙', w: 1920, h: 1080, fps: 30,  ratio: '' },
@@ -210,12 +210,12 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
       const ext = activeMime.startsWith('video/mp4') ? 'mp4'
                 : activeMime.startsWith('video/webm') ? 'webm'
                 : 'video';
-      const presetLabel = preset.id !== 'custom' ? preset.label.replace(/[^a-zA-Z0-9]/g, '_') : 'custom';
+      const sanitizedPresetName = preset.id !== 'custom' ? preset.label.replace(/[^a-zA-Z0-9]/g, '_') : 'custom';
       const blob = new Blob(chunks, { type: activeMime });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href     = url;
-      a.download = `videoforge_${presetLabel}_${fpsVal}fps_${Date.now()}.${ext}`;
+      a.download = `videoforge_${sanitizedPresetName}_${fpsVal}fps_${Date.now()}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
 
