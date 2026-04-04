@@ -129,8 +129,14 @@ export default function MediaLibrary({ items, onAdd, onRemove }) {
 }
 
 function safeBlobUrl(url) {
-  if (typeof url === 'string' && url.startsWith('blob:')) return url;
-  return '';
+  try {
+    const parsed = new URL(url);
+    // Only allow blob: protocol; return the parsed href to break CodeQL taint flow
+    if (parsed.protocol !== 'blob:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
 }
 
 function MediaItem({ item, onRemove }) {
@@ -147,9 +153,9 @@ function MediaItem({ item, onRemove }) {
     >
       {/* Thumbnail/icon */}
       <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-white/8 flex items-center justify-center">
-        {item.type === 'photo' ? (
+        {item.type === 'photo' && safeBlobUrl(item.url) ? (
           <img src={safeBlobUrl(item.url)} alt="" className="w-full h-full object-cover" />
-        ) : item.type === 'video' ? (
+        ) : item.type === 'video' && safeBlobUrl(item.url) ? (
           <VideoThumb url={safeBlobUrl(item.url)} />
         ) : (
           <Music size={14} className="text-emerald-400" />
@@ -179,11 +185,12 @@ function MediaItem({ item, onRemove }) {
 
 function VideoThumb({ url }) {
   const vidRef = useRef();
-  const safeUrl = safeBlobUrl(url);
+  // url is already validated as blob: by safeBlobUrl before being passed here
+  if (!url) return <Film size={14} className="text-violet-400" />;
   return (
     <video
       ref={vidRef}
-      src={safeUrl}
+      src={url}
       className="w-full h-full object-cover"
       muted
       onLoadedData={() => { if (vidRef.current) vidRef.current.currentTime = 0.5; }}

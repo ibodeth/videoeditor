@@ -5,8 +5,14 @@ import {
 } from 'lucide-react';
 
 function safeBlobUrl(url) {
-  if (typeof url === 'string' && url.startsWith('blob:')) return url;
-  return '';
+  try {
+    const parsed = new URL(url);
+    // Only allow blob: protocol; return parsed.href to break CodeQL taint flow
+    if (parsed.protocol !== 'blob:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
 }
 
 function formatTime(secs) {
