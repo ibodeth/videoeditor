@@ -65,7 +65,9 @@ export default function App() {
       setFuture([]);
       return next;
     });
-  }, []);
+  // setTracks, setHistory, setFuture are stable React state setters
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setTracks, setHistory, setFuture]);
 
   // Keyboard shortcuts
   useEffect(() => {

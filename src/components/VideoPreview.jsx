@@ -1,8 +1,13 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import {
   Play, Pause, Volume2, VolumeX, SkipBack, SkipForward,
-  Maximize2, RotateCcw, Film, Image, Music2
+  Maximize2, Film, Music2
 } from 'lucide-react';
+
+function safeBlobUrl(url) {
+  if (typeof url === 'string' && url.startsWith('blob:')) return url;
+  return '';
+}
 
 function formatTime(secs) {
   if (!secs || isNaN(secs)) return '0:00';
@@ -104,7 +109,7 @@ export default function VideoPreview({ clip, effect, brightness, contrast, satur
         ) : clip.type === 'video' ? (
           <video
             ref={videoRef}
-            src={clip.url}
+            src={safeBlobUrl(clip.url)}
             className="max-w-full max-h-full"
             style={filterStyle}
             onTimeUpdate={handleTimeUpdate}
@@ -114,7 +119,7 @@ export default function VideoPreview({ clip, effect, brightness, contrast, satur
           />
         ) : clip.type === 'photo' ? (
           <img
-            src={clip.url}
+            src={safeBlobUrl(clip.url)}
             alt={clip.name}
             className="max-w-full max-h-full object-contain"
             style={filterStyle}
@@ -127,7 +132,7 @@ export default function VideoPreview({ clip, effect, brightness, contrast, satur
             <p className="text-sm text-white/50">{clip.name}</p>
             <audio
               ref={videoRef}
-              src={clip.url}
+              src={safeBlobUrl(clip.url)}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={e => setDuration(e.target.duration)}
               onEnded={handleEnded}

@@ -128,6 +128,11 @@ export default function MediaLibrary({ items, onAdd, onRemove }) {
   );
 }
 
+function safeBlobUrl(url) {
+  if (typeof url === 'string' && url.startsWith('blob:')) return url;
+  return '';
+}
+
 function MediaItem({ item, onRemove }) {
   function handleDragStart(e) {
     e.dataTransfer.setData('application/media-id', item.id);
@@ -143,9 +148,9 @@ function MediaItem({ item, onRemove }) {
       {/* Thumbnail/icon */}
       <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-white/8 flex items-center justify-center">
         {item.type === 'photo' ? (
-          <img src={item.url} alt="" className="w-full h-full object-cover" />
+          <img src={safeBlobUrl(item.url)} alt="" className="w-full h-full object-cover" />
         ) : item.type === 'video' ? (
-          <VideoThumb url={item.url} />
+          <VideoThumb url={safeBlobUrl(item.url)} />
         ) : (
           <Music size={14} className="text-emerald-400" />
         )}
@@ -174,10 +179,11 @@ function MediaItem({ item, onRemove }) {
 
 function VideoThumb({ url }) {
   const vidRef = useRef();
+  const safeUrl = safeBlobUrl(url);
   return (
     <video
       ref={vidRef}
-      src={url}
+      src={safeUrl}
       className="w-full h-full object-cover"
       muted
       onLoadedData={() => { if (vidRef.current) vidRef.current.currentTime = 0.5; }}
