@@ -191,6 +191,14 @@ export default function CompositionViewer({
       ctx.translate(px, py);
       ctx.rotate((tr.rotation * Math.PI) / 180);
       ctx.scale(tr.scaleX, tr.scaleY);
+      // Skew (degrees → radians)
+      if (tr.skewX || tr.skewY) {
+        ctx.transform(1, Math.tan(tr.skewY * Math.PI / 180), Math.tan(tr.skewX * Math.PI / 180), 1, 0, 0);
+      }
+      // Anchor point: shift content so that (anchorX, anchorY) in composition space is at the layer position
+      if (tr.anchorX || tr.anchorY) {
+        ctx.translate(-tr.anchorX * scx, -tr.anchorY * scy);
+      }
 
       const hw = (compositionWidth  / 2) * scx;
       const hh = (compositionHeight / 2) * scy;

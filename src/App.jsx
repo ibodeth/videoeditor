@@ -91,6 +91,12 @@ export default function App() {
       if (e.key === ' ') { e.preventDefault(); setIsPlaying(p => !p); return; }
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); return; }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); return; }
+      // Tool shortcuts (no modifiers)
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key === 'v' || e.key === 'V') { setActiveTool('select'); return; }
+        if (e.key === 't' || e.key === 'T') { setActiveTool('text'); return; }
+        if (e.key === 'h' || e.key === 'H') { setActiveTool('hand'); return; }
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedLayerId) {
         setLayersWithHistory(prev => prev.filter(l => l.id !== selectedLayerId));
         setSelectedLayerId(null);

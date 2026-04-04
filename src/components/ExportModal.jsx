@@ -100,7 +100,7 @@ function getTransformAtTime(layer, time) {
     if (kfs[prop]?.length > 0) { const v = interpolateKF(kfs[prop], relTime); if (v !== null) return v; }
     return base[prop] ?? fallback;
   };
-  return { x: get('x',0), y: get('y',0), scaleX: get('scaleX',1), scaleY: get('scaleY',1), rotation: get('rotation',0), opacity: get('opacity',1) };
+  return { x: get('x',0), y: get('y',0), anchorX: get('anchorX',0), anchorY: get('anchorY',0), scaleX: get('scaleX',1), scaleY: get('scaleY',1), rotation: get('rotation',0), opacity: get('opacity',1), skewX: get('skewX',0), skewY: get('skewY',0) };
 }
 
 // How long to wait for a 'seeked' event before giving up (ms).
@@ -110,10 +110,22 @@ const SEEK_TIMEOUT_MS = 800;
 async function seekVideo(vid, targetTime) {
   return new Promise((resolve) => {
     if (Math.abs(vid.currentTime - targetTime) < 0.005) { resolve(); return; }
-    const onSeeked = () => { vid.removeEventListener('seeked', onSeeked); resolve(); };
+    let resolved = false;
+    const onSeeked = () => {
+      if (resolved) return;
+      resolved = true;
+      vid.removeEventListener('seeked', onSeeked);
+      resolve();
+    };
     vid.addEventListener('seeked', onSeeked);
     vid.currentTime = Math.max(0, targetTime);
-    setTimeout(resolve, SEEK_TIMEOUT_MS);
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        vid.removeEventListener('seeked', onSeeked);
+        resolve();
+      }
+    }, SEEK_TIMEOUT_MS);
   });
 }
 
@@ -150,6 +162,14 @@ function renderFrameToCanvas(ctx, layers, time, w, h, compositionWidth, composit
     ctx.translate(cx, cy);
     ctx.rotate((tr.rotation * Math.PI) / 180);
     ctx.scale(tr.scaleX * scaleX, tr.scaleY * scaleY);
+    // Skew
+    if (tr.skewX || tr.skewY) {
+      ctx.transform(1, Math.tan(tr.skewY * Math.PI / 180), Math.tan(tr.skewX * Math.PI / 180), 1, 0, 0);
+    }
+    // Anchor point (composition units; no extra scaleX needed here since scale already folded in)
+    if (tr.anchorX || tr.anchorY) {
+      ctx.translate(-tr.anchorX, -tr.anchorY);
+    }
 
     const hw = compositionWidth  / 2;
     const hh = compositionHeight / 2;

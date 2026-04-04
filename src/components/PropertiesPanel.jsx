@@ -164,16 +164,16 @@ export default function PropertiesPanel({ layer, onUpdateLayer, onUpdateTransfor
         <PropRow label="Anchor Y">
           <NumberInput value={t.anchorY ?? 0} onChange={v => onUpdateTransform(layer.id, { anchorY: v })} min={-4000} max={4000} step={1} format={v => Math.round(v)} />
         </PropRow>
-        <KeyframeRow prop="scaleX" value={Math.round((t.scaleX ?? 1) * 100)} layer={layerWithTime} onUpdateLayer={onUpdateLayer}>
+        <KeyframeRow prop="scaleX" value={t.scaleX ?? 1} layer={layerWithTime} onUpdateLayer={onUpdateLayer}>
           <SliderRow label="Scale X" value={Math.round((t.scaleX ?? 1) * 100)} onChange={v => onUpdateTransform(layer.id, { scaleX: v / 100 })} min={1} max={500} format={v => `${v}%`} />
         </KeyframeRow>
-        <KeyframeRow prop="scaleY" value={Math.round((t.scaleY ?? 1) * 100)} layer={layerWithTime} onUpdateLayer={onUpdateLayer}>
+        <KeyframeRow prop="scaleY" value={t.scaleY ?? 1} layer={layerWithTime} onUpdateLayer={onUpdateLayer}>
           <SliderRow label="Scale Y" value={Math.round((t.scaleY ?? 1) * 100)} onChange={v => onUpdateTransform(layer.id, { scaleY: v / 100 })} min={1} max={500} format={v => `${v}%`} />
         </KeyframeRow>
         <KeyframeRow prop="rotation" value={t.rotation ?? 0} layer={layerWithTime} onUpdateLayer={onUpdateLayer}>
           <SliderRow label="Rotation" value={t.rotation ?? 0} onChange={v => onUpdateTransform(layer.id, { rotation: v })} min={-360} max={360} format={v => `${Math.round(v)}°`} />
         </KeyframeRow>
-        <KeyframeRow prop="opacity" value={Math.round((t.opacity ?? 1) * 100)} layer={layerWithTime} onUpdateLayer={onUpdateLayer}>
+        <KeyframeRow prop="opacity" value={t.opacity ?? 1} layer={layerWithTime} onUpdateLayer={onUpdateLayer}>
           <SliderRow label="Opacity" value={Math.round((t.opacity ?? 1) * 100)} onChange={v => onUpdateTransform(layer.id, { opacity: v / 100 })} min={0} max={100} format={v => `${v}%`} />
         </KeyframeRow>
         <SliderRow label="Skew X" value={t.skewX ?? 0} onChange={v => onUpdateTransform(layer.id, { skewX: v })} min={-90} max={90} format={v => `${Math.round(v)}°`} />
