@@ -1,9 +1,10 @@
-import { EFFECTS } from './effects.js';
+import { EFFECTS, BLEND_MODES } from './effects.js';
 
 const CATEGORIES = [
-  { id: 'filter',   label: 'Filters'    },
-  { id: 'adjust',   label: 'Adjustments'},
-  { id: 'creative', label: 'Creative'   },
+  { id: 'filter',    label: 'Filters'     },
+  { id: 'adjust',    label: 'Adjustments' },
+  { id: 'creative',  label: 'Creative'    },
+  { id: 'cinematic', label: 'Cinematic'   },
 ];
 
 export default function EffectsPanel({ selectedLayer, onUpdateLayer }) {
@@ -26,6 +27,23 @@ export default function EffectsPanel({ selectedLayer, onUpdateLayer }) {
         </div>
       ) : (
         <div style={{ flex: 1, overflowY: 'auto', padding: 6 }}>
+          {/* Blend mode */}
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 10, color: '#555', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '3px 2px 5px' }}>
+              Blend Mode
+            </div>
+            <select
+              value={selectedLayer.blendMode || 'source-over'}
+              onChange={e => onUpdateLayer(selectedLayer.id, { blendMode: e.target.value })}
+              style={{ width: '100%', background: '#111', border: '1px solid #333', color: '#ccc', fontSize: 11, padding: '3px 5px', borderRadius: 3, outline: 'none' }}
+            >
+              {BLEND_MODES.map(bm => (
+                <option key={bm.id} value={bm.id}>{bm.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Effect preset buttons by category */}
           {CATEGORIES.map(cat => (
             <div key={cat.id} style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 10, color: '#555', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '3px 2px 5px' }}>

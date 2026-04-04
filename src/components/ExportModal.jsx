@@ -1,74 +1,367 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Download, Film, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 // ─── Platform presets ──────────────────────────────────────────────────────────
 const PRESETS = [
-  // YouTube
-  { id: 'yt-4k',        group: 'YouTube',    label: 'YouTube 4K',             icon: '▶', w: 3840, h: 2160, fps: 30,  ratio: '16:9' },
-  { id: 'yt-1080',      group: 'YouTube',    label: 'YouTube 1080p',          icon: '▶', w: 1920, h: 1080, fps: 30,  ratio: '16:9' },
-  { id: 'yt-720',       group: 'YouTube',    label: 'YouTube 720p',           icon: '▶', w: 1280, h: 720,  fps: 30,  ratio: '16:9' },
-  { id: 'yt-shorts',    group: 'YouTube',    label: 'YouTube Shorts',         icon: '▶', w: 1080, h: 1920, fps: 60,  ratio: '9:16' },
-  // TikTok
-  { id: 'tt-1080',      group: 'TikTok',     label: 'TikTok HD',              icon: '♪', w: 1080, h: 1920, fps: 60,  ratio: '9:16' },
-  { id: 'tt-720',       group: 'TikTok',     label: 'TikTok Standard',        icon: '♪', w: 720,  h: 1280, fps: 30,  ratio: '9:16' },
-  // Instagram
-  { id: 'ig-reels',     group: 'Instagram',  label: 'Reels / Story',          icon: '◈', w: 1080, h: 1920, fps: 30,  ratio: '9:16' },
-  { id: 'ig-portrait',  group: 'Instagram',  label: 'Feed Portrait (4:5)',    icon: '◈', w: 1080, h: 1350, fps: 30,  ratio: '4:5'  },
-  { id: 'ig-square',    group: 'Instagram',  label: 'Feed Square (1:1)',      icon: '◈', w: 1080, h: 1080, fps: 30,  ratio: '1:1'  },
-  { id: 'ig-landscape', group: 'Instagram',  label: 'Feed Landscape (1.91:1)',icon: '◈', w: 1080, h: 566,  fps: 30,  ratio: '1.91:1'},
-  // Twitter / X
-  { id: 'tw-1080',      group: 'Twitter/X',  label: 'Twitter/X Landscape',   icon: '✕', w: 1920, h: 1080, fps: 30,  ratio: '16:9' },
-  { id: 'tw-square',    group: 'Twitter/X',  label: 'Twitter/X Square',      icon: '✕', w: 1080, h: 1080, fps: 30,  ratio: '1:1'  },
-  { id: 'tw-portrait',  group: 'Twitter/X',  label: 'Twitter/X Portrait',    icon: '✕', w: 1080, h: 1350, fps: 30,  ratio: '4:5'  },
-  // Vimeo
-  { id: 'vi-4k',        group: 'Vimeo',      label: 'Vimeo 4K',              icon: '⬡', w: 3840, h: 2160, fps: 30,  ratio: '16:9' },
-  { id: 'vi-1080',      group: 'Vimeo',      label: 'Vimeo 1080p',           icon: '⬡', w: 1920, h: 1080, fps: 30,  ratio: '16:9' },
-  // Cinema / Film
-  { id: 'cin-4k-dci',   group: 'Cinema',     label: 'DCI 4K (4096×2160)',    icon: '🎞', w: 4096, h: 2160, fps: 24,  ratio: '1.9:1' },
-  { id: 'cin-2k',       group: 'Cinema',     label: 'DCI 2K (2048×1080)',    icon: '🎞', w: 2048, h: 1080, fps: 24,  ratio: '1.9:1' },
-  { id: 'cin-1080-24',  group: 'Cinema',     label: '1080p Cinematic (24fps)',icon: '🎞',w: 1920, h: 1080, fps: 24,  ratio: '16:9' },
-  // Custom
-  { id: 'custom',       group: 'Custom',     label: 'Custom…',               icon: '⚙', w: 1920, h: 1080, fps: 30,  ratio: '' },
+  { id: 'yt-4k',        group: 'YouTube',    label: 'YouTube 4K',              icon: '▶', w: 3840, h: 2160, fps: 30,  ratio: '16:9' },
+  { id: 'yt-1080',      group: 'YouTube',    label: 'YouTube 1080p',           icon: '▶', w: 1920, h: 1080, fps: 30,  ratio: '16:9' },
+  { id: 'yt-720',       group: 'YouTube',    label: 'YouTube 720p',            icon: '▶', w: 1280, h: 720,  fps: 30,  ratio: '16:9' },
+  { id: 'yt-shorts',    group: 'YouTube',    label: 'YouTube Shorts',          icon: '▶', w: 1080, h: 1920, fps: 60,  ratio: '9:16' },
+  { id: 'tt-1080',      group: 'TikTok',     label: 'TikTok HD',               icon: '♪', w: 1080, h: 1920, fps: 60,  ratio: '9:16' },
+  { id: 'tt-720',       group: 'TikTok',     label: 'TikTok Standard',         icon: '♪', w: 720,  h: 1280, fps: 30,  ratio: '9:16' },
+  { id: 'ig-reels',     group: 'Instagram',  label: 'Reels / Story',           icon: '◈', w: 1080, h: 1920, fps: 30,  ratio: '9:16' },
+  { id: 'ig-portrait',  group: 'Instagram',  label: 'Feed Portrait (4:5)',     icon: '◈', w: 1080, h: 1350, fps: 30,  ratio: '4:5'  },
+  { id: 'ig-square',    group: 'Instagram',  label: 'Feed Square (1:1)',       icon: '◈', w: 1080, h: 1080, fps: 30,  ratio: '1:1'  },
+  { id: 'ig-landscape', group: 'Instagram',  label: 'Feed Landscape (1.91:1)', icon: '◈', w: 1080, h: 566,  fps: 30,  ratio: '1.91:1'},
+  { id: 'tw-1080',      group: 'Twitter/X',  label: 'Twitter/X Landscape',    icon: '✕', w: 1920, h: 1080, fps: 30,  ratio: '16:9' },
+  { id: 'tw-square',    group: 'Twitter/X',  label: 'Twitter/X Square',       icon: '✕', w: 1080, h: 1080, fps: 30,  ratio: '1:1'  },
+  { id: 'vi-4k',        group: 'Vimeo',      label: 'Vimeo 4K',               icon: '⬡', w: 3840, h: 2160, fps: 30,  ratio: '16:9' },
+  { id: 'vi-1080',      group: 'Vimeo',      label: 'Vimeo 1080p',            icon: '⬡', w: 1920, h: 1080, fps: 30,  ratio: '16:9' },
+  { id: 'cin-4k-dci',   group: 'Cinema',     label: 'DCI 4K (4096×2160)',     icon: '🎞', w: 4096, h: 2160, fps: 24,  ratio: '1.9:1' },
+  { id: 'cin-2k',       group: 'Cinema',     label: 'DCI 2K (2048×1080)',     icon: '🎞', w: 2048, h: 1080, fps: 24,  ratio: '1.9:1' },
+  { id: 'cin-1080-24',  group: 'Cinema',     label: '1080p Cinematic (24fps)', icon: '🎞', w: 1920, h: 1080, fps: 24,  ratio: '16:9' },
+  { id: 'custom',       group: 'Custom',     label: 'Custom…',                icon: '⚙', w: 1920, h: 1080, fps: 30,  ratio: '' },
 ];
 
 const PRESET_GROUPS = [...new Set(PRESETS.map(p => p.group))];
 
-const QUALITIES = {
-  'Lossless (Best)': 20_000_000,
-  'High':             8_000_000,
-  'Medium':           4_000_000,
-  'Low':              1_500_000,
-  'Draft':              500_000,
-};
+const QUALITY_PRESETS = [
+  { label: 'Lossless (Best)', videoBitrate: 20_000_000, h264Bitrate: 15_000_000 },
+  { label: 'High',            videoBitrate:  8_000_000, h264Bitrate:  6_000_000 },
+  { label: 'Medium',          videoBitrate:  4_000_000, h264Bitrate:  3_000_000 },
+  { label: 'Low',             videoBitrate:  1_500_000, h264Bitrate:  1_200_000 },
+  { label: 'Draft',           videoBitrate:    500_000, h264Bitrate:    400_000 },
+];
 
 const FPS_OPTIONS = [12, 24, 25, 29.97, 30, 48, 50, 59.94, 60];
 
-// Detect which MIME types the browser supports
-function detectMimeTypes() {
-  const candidates = [
-    { label: 'WebM VP9 (Best)', mime: 'video/webm;codecs=vp9' },
-    { label: 'WebM VP8',        mime: 'video/webm;codecs=vp8' },
-    { label: 'WebM H.264',      mime: 'video/webm;codecs=h264' },
-    { label: 'MP4 H.264',       mime: 'video/mp4;codecs=h264' },
-    { label: 'WebM (auto)',     mime: 'video/webm' },
-  ];
-  return candidates.filter(c => {
-    try { return MediaRecorder.isTypeSupported(c.mime); } catch { return false; }
+// ─── Format detection ────────────────────────────────────────────────────────
+const FORMAT_OPTIONS = [];
+
+// Always add WebM options
+['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].forEach(mime => {
+  try {
+    if (MediaRecorder.isTypeSupported(mime)) {
+      const label = mime.includes('vp9') ? 'WebM VP9' : mime.includes('vp8') ? 'WebM VP8' : 'WebM';
+      if (!FORMAT_OPTIONS.find(f => f.mime === mime))
+        FORMAT_OPTIONS.push({ label, mime, engine: 'mediarecorder', ext: 'webm' });
+    }
+  } catch { /* ignore */ }
+});
+
+// MP4 via WebCodecs VideoEncoder (Chrome 94+, Edge 94+)
+const MP4_CODECS = [
+  { codec: 'avc1.42E01E', label: 'MP4 H.264 (Baseline)', bitrate: 6_000_000 },
+  { codec: 'avc1.4D401E', label: 'MP4 H.264 (Main)',     bitrate: 6_000_000 },
+  { codec: 'hvc1.1.6.L93.B0', label: 'MP4 H.265/HEVC',  bitrate: 4_000_000 },
+  { codec: 'av01.0.08M.08', label: 'MP4 AV1',            bitrate: 3_000_000 },
+];
+
+for (const opt of MP4_CODECS) {
+  if (typeof VideoEncoder !== 'undefined') {
+    FORMAT_OPTIONS.push({ label: opt.label, mime: 'video/mp4', engine: 'webcodecs', ext: 'mp4', codec: opt.codec });
+    break; // Add only first supported; we'll check at export time
+  }
+}
+
+// ─── Canvas rendering helpers ────────────────────────────────────────────────
+function buildLayerFilter(layer) {
+  const parts = [];
+  if (layer.brightness !== undefined && layer.brightness !== 100) parts.push(`brightness(${layer.brightness / 100})`);
+  if (layer.contrast   !== undefined && layer.contrast   !== 100) parts.push(`contrast(${layer.contrast / 100})`);
+  if (layer.saturation !== undefined && layer.saturation !== 100) parts.push(`saturate(${layer.saturation / 100})`);
+  if (layer.hue        !== undefined && layer.hue        !== 0)   parts.push(`hue-rotate(${layer.hue}deg)`);
+  if (layer.effects && layer.effects.length > 0 && layer.effects[0] !== 'none') parts.push(layer.effects[0]);
+  return parts.join(' ') || 'none';
+}
+
+function interpolateKF(keyframes, time) {
+  if (!keyframes || keyframes.length === 0) return null;
+  if (keyframes.length === 1) return keyframes[0].value;
+  let lo = keyframes[0], hi = keyframes[keyframes.length - 1];
+  for (let i = 0; i < keyframes.length - 1; i++) {
+    if (time >= keyframes[i].time && time <= keyframes[i + 1].time) {
+      lo = keyframes[i]; hi = keyframes[i + 1]; break;
+    }
+  }
+  if (time <= lo.time) return lo.value;
+  if (time >= hi.time) return hi.value;
+  const t = (time - lo.time) / (hi.time - lo.time);
+  const ease = t * t * (3 - 2 * t);
+  if (typeof lo.value === 'number') return lo.value + (hi.value - lo.value) * ease;
+  return lo.value;
+}
+
+function getTransformAtTime(layer, time) {
+  const kfs = layer.keyframes || {};
+  const relTime = time - layer.startTime;
+  const base = layer.transform || {};
+  const get = (prop, fallback) => {
+    if (kfs[prop]?.length > 0) { const v = interpolateKF(kfs[prop], relTime); if (v !== null) return v; }
+    return base[prop] ?? fallback;
+  };
+  return { x: get('x',0), y: get('y',0), scaleX: get('scaleX',1), scaleY: get('scaleY',1), rotation: get('rotation',0), opacity: get('opacity',1) };
+}
+
+async function seekVideo(vid, targetTime) {
+  return new Promise((resolve) => {
+    if (Math.abs(vid.currentTime - targetTime) < 0.005) { resolve(); return; }
+    const onSeeked = () => { vid.removeEventListener('seeked', onSeeked); resolve(); };
+    vid.addEventListener('seeked', onSeeked);
+    vid.currentTime = Math.max(0, targetTime);
+    // Fallback timeout in case seeked doesn't fire
+    setTimeout(resolve, 800);
   });
 }
 
-const SUPPORTED_MIMES = detectMimeTypes();
+function renderFrameToCanvas(ctx, layers, time, w, h, compositionWidth, compositionHeight, videoEls, imageCache) {
+  const scaleX = w / compositionWidth;
+  const scaleY = h / compositionHeight;
 
-export default function ExportModal({ onClose, layers, compositionDuration, compositionWidth, compositionHeight }) {
-  const defaultPreset = PRESETS.find(p => p.id === 'yt-1080');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+
+  const visible = [...layers]
+    .filter(l => l.visible && time >= l.startTime && time < l.startTime + l.duration)
+    .sort((a, b) => b.trackIndex - a.trackIndex);
+
+  for (const layer of visible) {
+    ctx.save();
+    const tr = getTransformAtTime(layer, time);
+    ctx.globalAlpha = Math.max(0, Math.min(1, tr.opacity));
+    ctx.globalCompositeOperation = layer.blendMode || 'source-over';
+
+    const filterStr = buildLayerFilter(layer);
+    if (filterStr !== 'none') ctx.filter = filterStr;
+
+    const ds = layer.dropShadow;
+    if (ds?.enabled) {
+      ctx.shadowColor   = ds.color   || 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur    = ds.blur    ?? 10;
+      ctx.shadowOffsetX = ds.offsetX ?? 5;
+      ctx.shadowOffsetY = ds.offsetY ?? 5;
+    }
+
+    const cx = (compositionWidth  / 2 + tr.x) * scaleX;
+    const cy = (compositionHeight / 2 + tr.y) * scaleY;
+    ctx.translate(cx, cy);
+    ctx.rotate((tr.rotation * Math.PI) / 180);
+    ctx.scale(tr.scaleX * scaleX, tr.scaleY * scaleY);
+
+    const hw = compositionWidth  / 2;
+    const hh = compositionHeight / 2;
+
+    if (layer.type === 'video' && videoEls[layer.id]) {
+      const vid = videoEls[layer.id];
+      if (vid.readyState >= 2) ctx.drawImage(vid, -hw, -hh, compositionWidth, compositionHeight);
+    } else if (layer.type === 'photo' && imageCache[layer.url]) {
+      const img = imageCache[layer.url];
+      if (img.naturalWidth > 0) ctx.drawImage(img, -hw, -hh, compositionWidth, compositionHeight);
+    } else if (layer.type === 'text') {
+      drawText(ctx, layer);
+    } else if (layer.type === 'shape') {
+      drawShape(ctx, layer);
+    }
+    ctx.restore();
+  }
+}
+
+function drawText(ctx, layer) {
+  const fSize = layer.fontSize ?? 48;
+  ctx.font = `${layer.fontItalic ? 'italic ' : ''}${layer.fontBold ? 'bold ' : ''}${fSize}px ${layer.fontFamily ?? 'Arial'}`;
+  ctx.textAlign    = layer.textAlign ?? 'center';
+  ctx.textBaseline = 'middle';
+  const text  = layer.text ?? '';
+  const lines = text.split('\n');
+  const lineH = fSize * (layer.lineHeight ?? 1.2);
+  const startY = -((lines.length - 1) * lineH) / 2;
+  if (layer.textShadow) {
+    ctx.shadowColor   = layer.textShadowColor   ?? 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur    = layer.textShadowBlur    ?? 4;
+    ctx.shadowOffsetX = layer.textShadowOffsetX ?? 2;
+    ctx.shadowOffsetY = layer.textShadowOffsetY ?? 2;
+  }
+  lines.forEach((line, i) => {
+    const y = startY + i * lineH;
+    if ((layer.textStroke ?? 0) > 0) {
+      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+      ctx.lineWidth = layer.textStroke * 2;
+      ctx.strokeStyle = layer.textStrokeColor ?? '#000000';
+      ctx.strokeText(line, 0, y);
+    }
+    ctx.fillStyle = layer.fontColor ?? '#ffffff';
+    ctx.fillText(line, 0, y);
+  });
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+}
+
+function drawShape(ctx, layer) {
+  const sw = layer.shapeWidth  ?? 400;
+  const sh = layer.shapeHeight ?? 300;
+  ctx.beginPath();
+  if (layer.shapeType === 'ellipse') {
+    ctx.ellipse(0, 0, sw / 2, sh / 2, 0, 0, Math.PI * 2);
+  } else {
+    const r = Math.min(layer.cornerRadius ?? 0, sw / 2, sh / 2);
+    if (r > 0) ctx.roundRect(-sw / 2, -sh / 2, sw, sh, r);
+    else       ctx.rect(-sw / 2, -sh / 2, sw, sh);
+  }
+  if (layer.fill)   { ctx.fillStyle = layer.fill; ctx.fill(); }
+  if (layer.stroke && (layer.strokeWidth ?? 0) > 0) { ctx.strokeStyle = layer.stroke; ctx.lineWidth = layer.strokeWidth; ctx.stroke(); }
+}
+
+// ─── Export via MediaRecorder (WebM) ────────────────────────────────────────
+async function exportWebM({ canvas, layers, compositionDuration, compositionWidth, compositionHeight, fpsVal, videoBitrate, mimeType, cancelRef, setProgress }) {
+  const w = canvas.width, h = canvas.height;
+  const ctx = canvas.getContext('2d');
+
+  const videoEls  = {};
+  const imageCache = {};
+
+  for (const layer of layers) {
+    if (layer.type === 'video' && layer.url) {
+      const vid = document.createElement('video');
+      vid.src = layer.url; vid.muted = true; vid.crossOrigin = 'anonymous';
+      await new Promise(r => { vid.onloadedmetadata = r; vid.onerror = r; vid.load(); setTimeout(r, 3000); });
+      videoEls[layer.id] = vid;
+    }
+    if (layer.type === 'photo' && layer.url) {
+      const img = new Image(); img.crossOrigin = 'anonymous'; img.src = layer.url;
+      await new Promise(r => { img.onload = r; img.onerror = r; if (img.complete) r(); });
+      imageCache[layer.url] = img;
+    }
+  }
+
+  const stream   = canvas.captureStream(fpsVal);
+  const chunks   = [];
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: videoBitrate });
+  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+  recorder.start();
+
+  const totalFrames   = Math.ceil(compositionDuration * fpsVal);
+  const sortedLayers  = [...layers].sort((a, b) => b.trackIndex - a.trackIndex);
+
+  for (let frame = 0; frame < totalFrames; frame++) {
+    if (cancelRef.current) { recorder.stop(); return null; }
+    const time = frame / fpsVal;
+
+    // Seek all video layers to correct position
+    for (const layer of sortedLayers) {
+      if (layer.type !== 'video' || !videoEls[layer.id]) continue;
+      const isActive = time >= layer.startTime && time < layer.startTime + layer.duration;
+      if (isActive) {
+        const speed   = layer.speed ?? 1;
+        const srcTime = (time - layer.startTime) * speed + (layer.trimIn ?? 0);
+        await seekVideo(videoEls[layer.id], srcTime);
+      }
+    }
+
+    renderFrameToCanvas(ctx, sortedLayers, time, w, h, compositionWidth, compositionHeight, videoEls, imageCache);
+    setProgress((frame + 1) / totalFrames);
+    // Yield to allow canvas to flush
+    await new Promise(r => setTimeout(r, 0));
+  }
+
+  recorder.stop();
+  await new Promise(r => { recorder.onstop = r; });
+  return new Blob(chunks, { type: mimeType });
+}
+
+// ─── Export via WebCodecs + mp4-muxer (MP4) ─────────────────────────────────
+async function exportMP4({ canvas, layers, compositionDuration, compositionWidth, compositionHeight, fpsVal, videoBitrate, codec, cancelRef, setProgress }) {
+  const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
+
+  const w = canvas.width, h = canvas.height;
+  const ctx = canvas.getContext('2d');
+
+  // Check VideoEncoder support for codec
+  const support = await VideoEncoder.isConfigSupported({ codec, width: w, height: h });
+  if (!support.supported) throw new Error(`Codec ${codec} not supported in this browser. Try a different format.`);
+
+  const videoEls   = {};
+  const imageCache = {};
+
+  for (const layer of layers) {
+    if (layer.type === 'video' && layer.url) {
+      const vid = document.createElement('video');
+      vid.src = layer.url; vid.muted = true; vid.crossOrigin = 'anonymous';
+      await new Promise(r => { vid.onloadedmetadata = r; vid.onerror = r; vid.load(); setTimeout(r, 3000); });
+      videoEls[layer.id] = vid;
+    }
+    if (layer.type === 'photo' && layer.url) {
+      const img = new Image(); img.crossOrigin = 'anonymous'; img.src = layer.url;
+      await new Promise(r => { img.onload = r; img.onerror = r; if (img.complete) r(); });
+      imageCache[layer.url] = img;
+    }
+  }
+
+  const target = new ArrayBufferTarget();
+  const muxer  = new Muxer({
+    target,
+    video: { codec: 'avc', width: w, height: h },
+    fastStart: 'in-memory',
+  });
+
+  let encodeError = null;
+
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => {
+      muxer.addVideoChunk(chunk, meta);
+    },
+    error: (e) => { encodeError = e; },
+  });
+
+  encoder.configure({ codec, width: w, height: h, bitrate: videoBitrate, framerate: fpsVal });
+
+  const totalFrames  = Math.ceil(compositionDuration * fpsVal);
+  const sortedLayers = [...layers].sort((a, b) => b.trackIndex - a.trackIndex);
+  const frameDuration = 1_000_000 / fpsVal; // microseconds
+
+  for (let frame = 0; frame < totalFrames; frame++) {
+    if (cancelRef.current) { encoder.close(); return null; }
+    if (encodeError) throw encodeError;
+
+    const time = frame / fpsVal;
+
+    for (const layer of sortedLayers) {
+      if (layer.type !== 'video' || !videoEls[layer.id]) continue;
+      const isActive = time >= layer.startTime && time < layer.startTime + layer.duration;
+      if (isActive) {
+        const speed   = layer.speed ?? 1;
+        const srcTime = (time - layer.startTime) * speed + (layer.trimIn ?? 0);
+        await seekVideo(videoEls[layer.id], srcTime);
+      }
+    }
+
+    renderFrameToCanvas(ctx, sortedLayers, time, w, h, compositionWidth, compositionHeight, videoEls, imageCache);
+
+    const imageBitmap = await createImageBitmap(canvas);
+    const videoFrame  = new VideoFrame(imageBitmap, { timestamp: Math.round(frame * frameDuration) });
+    encoder.encode(videoFrame, { keyFrame: frame % (fpsVal * 2) === 0 });
+    videoFrame.close();
+    imageBitmap.close();
+
+    setProgress((frame + 1) / totalFrames);
+    await new Promise(r => setTimeout(r, 0));
+  }
+
+  await encoder.flush();
+  encoder.close();
+  muxer.finalize();
+
+  return new Blob([target.buffer], { type: 'video/mp4' });
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+export default function ExportModal({ onClose, layers, compositionDuration, compositionWidth, compositionHeight, fps: defaultFps = 30 }) {
   const [selectedPresetId, setSelectedPresetId] = useState('yt-1080');
   const [customW,    setCustomW]    = useState(1920);
   const [customH,    setCustomH]    = useState(1080);
-  const [fps,        setFps]        = useState(defaultPreset.fps);
+  const [fps,        setFps]        = useState(defaultFps);
   const [quality,    setQuality]    = useState('High');
-  const [mimeChoice, setMimeChoice] = useState(SUPPORTED_MIMES[0]?.mime ?? 'video/webm');
+  const [format,     setFormat]     = useState(FORMAT_OPTIONS[0] ?? null);
   const [progress,   setProgress]   = useState(0);
-  const [status,     setStatus]     = useState('idle');
+  const [status,     setStatus]     = useState('idle');  // idle | exporting | done | error
   const [errMsg,     setErrMsg]     = useState('');
   const [showGroups, setShowGroups] = useState({});
   const cancelRef = useRef(false);
@@ -76,6 +369,30 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
   const preset = PRESETS.find(p => p.id === selectedPresetId) ?? PRESETS[0];
   const outW = selectedPresetId === 'custom' ? customW : preset.w;
   const outH = selectedPresetId === 'custom' ? customH : preset.h;
+
+  // Ensure format options are up to date
+  const [availableFormats, setAvailableFormats] = useState(FORMAT_OPTIONS);
+  useEffect(() => {
+    // Probe WebCodecs for supported MP4 codecs
+    if (typeof VideoEncoder === 'undefined') return;
+    const probeCodecs = async () => {
+      const mp4Options = [];
+      for (const opt of MP4_CODECS) {
+        try {
+          const support = await VideoEncoder.isConfigSupported({ codec: opt.codec, width: 1920, height: 1080 });
+          if (support.supported) {
+            mp4Options.push({ label: opt.label, mime: 'video/mp4', engine: 'webcodecs', ext: 'mp4', codec: opt.codec });
+          }
+        } catch { /* skip */ }
+      }
+      if (mp4Options.length > 0) {
+        const sorted = [...mp4Options, ...FORMAT_OPTIONS.filter(f => f.ext !== 'mp4')];
+        setAvailableFormats(sorted);
+        setFormat(sorted[0]);
+      }
+    };
+    probeCodecs();
+  }, []);
 
   function selectPreset(p) {
     setSelectedPresetId(p.id);
@@ -87,6 +404,7 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
   }
 
   async function handleExport() {
+    if (!format) { setErrMsg('No supported export format found in this browser.'); setStatus('error'); return; }
     cancelRef.current = false;
     setStatus('exporting');
     setProgress(0);
@@ -95,127 +413,35 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
       const w      = Math.max(2, Math.round(outW));
       const h      = Math.max(2, Math.round(outH));
       const fpsVal = Number(fps) || 30;
+      const qPreset = QUALITY_PRESETS.find(q => q.label === quality) ?? QUALITY_PRESETS[1];
 
-      // Offscreen canvas
       const canvas = document.createElement('canvas');
       canvas.width  = w;
       canvas.height = h;
-      const ctx = canvas.getContext('2d');
 
-      // Use user-selected mime type, fall back gracefully
-      const activeMime = (mimeChoice && MediaRecorder.isTypeSupported(mimeChoice))
-        ? mimeChoice
-        : SUPPORTED_MIMES[0]?.mime ?? null;
-      if (!activeMime) throw new Error('MediaRecorder is not supported in this browser.');
+      let blob = null;
 
-      // Set up recorder
-      const stream = canvas.captureStream(fpsVal);
-      const chunks = [];
-      const recorder = new MediaRecorder(stream, {
-        mimeType: activeMime,
-        videoBitsPerSecond: QUALITIES[quality],
-      });
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-
-      // Create video elements for video layers
-      const videoEls = {};
-      for (const layer of layers) {
-        if (layer.type === 'video' && layer.url) {
-          const vid = document.createElement('video');
-          vid.src  = layer.url;
-          vid.muted = true;
-          vid.crossOrigin = 'anonymous';
-          await new Promise(r => { vid.onloadedmetadata = r; vid.onerror = r; vid.load(); setTimeout(r, 3000); });
-          videoEls[layer.id] = vid;
-        }
+      if (format.engine === 'webcodecs' && typeof VideoEncoder !== 'undefined') {
+        blob = await exportMP4({
+          canvas, layers, compositionDuration, compositionWidth, compositionHeight,
+          fpsVal, videoBitrate: qPreset.h264Bitrate, codec: format.codec,
+          cancelRef, setProgress,
+        });
+      } else {
+        blob = await exportWebM({
+          canvas, layers, compositionDuration, compositionWidth, compositionHeight,
+          fpsVal, videoBitrate: qPreset.videoBitrate, mimeType: format.mime,
+          cancelRef, setProgress,
+        });
       }
 
-      // Image cache
-      const imageCache = {};
-      for (const layer of layers) {
-        if (layer.type === 'photo' && layer.url) {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.src = layer.url;
-          await new Promise(r => { img.onload = r; img.onerror = r; if (img.complete) r(); });
-          imageCache[layer.url] = img;
-        }
-      }
+      if (!blob || cancelRef.current) { setStatus('idle'); setProgress(0); return; }
 
-      recorder.start();
-
-      const totalFrames = Math.ceil(compositionDuration * fpsVal);
-      const scaleX = w / compositionWidth;
-      const scaleY = h / compositionHeight;
-
-      // Pre-sort layers once (layer order doesn't change during export)
-      const sortedLayers = [...layers].sort((a, b) => b.trackIndex - a.trackIndex);
-
-      for (let frame = 0; frame < totalFrames; frame++) {
-        if (cancelRef.current) { recorder.stop(); return; }
-
-        const time = frame / fpsVal;
-
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, w, h);
-
-        const visible = sortedLayers.filter(
-          l => l.visible && time >= l.startTime && time < l.startTime + l.duration
-        );
-
-        for (const layer of visible) {
-          ctx.save();
-          ctx.globalAlpha = Math.max(0, Math.min(1, layer.transform?.opacity ?? 1));
-
-          const cx = (compositionWidth / 2 + (layer.transform?.x ?? 0)) * scaleX;
-          const cy = (compositionHeight / 2 + (layer.transform?.y ?? 0)) * scaleY;
-          ctx.translate(cx, cy);
-          ctx.rotate(((layer.transform?.rotation ?? 0) * Math.PI) / 180);
-          ctx.scale(
-            (layer.transform?.scaleX ?? 1) * scaleX,
-            (layer.transform?.scaleY ?? 1) * scaleY
-          );
-
-          const hw = compositionWidth  / 2;
-          const hh = compositionHeight / 2;
-
-          if (layer.type === 'video' && videoEls[layer.id]) {
-            const vid  = videoEls[layer.id];
-            const srcT = time - layer.startTime + (layer.trimIn ?? 0);
-            vid.currentTime = Math.max(0, srcT);
-            await new Promise(r => { vid.onseeked = r; setTimeout(r, 16); });
-            if (vid.readyState >= 2) ctx.drawImage(vid, -hw, -hh, compositionWidth, compositionHeight);
-          } else if (layer.type === 'photo' && imageCache[layer.url]) {
-            const img = imageCache[layer.url];
-            if (img.naturalWidth > 0) ctx.drawImage(img, -hw, -hh, compositionWidth, compositionHeight);
-          } else if (layer.type === 'text') {
-            ctx.font = `${layer.fontSize ?? 48}px ${layer.fontFamily ?? 'Arial'}`;
-            ctx.fillStyle = layer.fontColor ?? '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(layer.text ?? '', 0, 0);
-          }
-
-          ctx.restore();
-        }
-
-        setProgress((frame + 1) / totalFrames);
-        await new Promise(r => setTimeout(r, 0));
-      }
-
-      recorder.stop();
-      await new Promise(r => { recorder.onstop = r; });
-
-      // Pick file extension from mime type
-      const ext = activeMime.startsWith('video/mp4') ? 'mp4'
-                : activeMime.startsWith('video/webm') ? 'webm'
-                : 'video';
       const sanitizedPresetName = preset.id !== 'custom' ? preset.label.replace(/[^a-zA-Z0-9]/g, '_') : 'custom';
-      const blob = new Blob(chunks, { type: activeMime });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
       a.href     = url;
-      a.download = `videoforge_${sanitizedPresetName}_${fpsVal}fps_${Date.now()}.${ext}`;
+      a.download = `videoforge_${sanitizedPresetName}_${fpsVal}fps_${Date.now()}.${format.ext}`;
       a.click();
       URL.revokeObjectURL(url);
 
@@ -233,14 +459,13 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
     setProgress(0);
   }
 
-  // ── Shared styles ──
-  const selStyle = { display: 'block', marginTop: 4, width: '100%', background: '#111', border: '1px solid #333', borderRadius: 3, color: '#ccc', padding: '5px 8px', fontSize: 12, outline: 'none' };
-  const labelStyle = { fontSize: 11, color: '#888' };
+  const selStyle    = { display: 'block', marginTop: 4, width: '100%', background: '#111', border: '1px solid #333', borderRadius: 3, color: '#ccc', padding: '5px 8px', fontSize: 12, outline: 'none' };
+  const labelStyle  = { fontSize: 11, color: '#888' };
   const sectionHead = { fontSize: 10, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '10px 0 4px' };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} className="fade-in">
-      <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8, width: 460, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.9)' }}>
+      <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8, width: 480, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.9)' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #2a2a2a', gap: 8, flexShrink: 0 }}>
@@ -263,28 +488,24 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
               </div>
               <p style={{ color: '#ccc', fontSize: 13, marginBottom: 4, fontWeight: 600 }}>Export Complete!</p>
               <p style={{ color: '#555', fontSize: 11, marginBottom: 20 }}>File downloaded to your browser</p>
-              <button onClick={onClose} style={{ padding: '6px 24px', background: '#252525', border: '1px solid #333', borderRadius: 4, color: '#aaa', cursor: 'pointer', fontSize: 12 }}>
-                Close
-              </button>
+              <button onClick={onClose} style={{ padding: '6px 24px', background: '#252525', border: '1px solid #333', borderRadius: 4, color: '#aaa', cursor: 'pointer', fontSize: 12 }}>Close</button>
             </div>
 
           ) : status === 'error' ? (
             <div style={{ textAlign: 'center', padding: '12px 0' }}>
               <AlertCircle size={32} style={{ color: '#ff6655', margin: '0 auto 8px', display: 'block' }} />
               <p style={{ color: '#ff8877', fontSize: 12, marginBottom: 12 }}>{errMsg}</p>
-              <button onClick={() => setStatus('idle')} style={{ padding: '5px 16px', background: '#2a2a2a', border: '1px solid #333', borderRadius: 4, color: '#aaa', cursor: 'pointer', fontSize: 12 }}>
-                Back
-              </button>
+              <button onClick={() => setStatus('idle')} style={{ padding: '5px 16px', background: '#2a2a2a', border: '1px solid #333', borderRadius: 4, color: '#aaa', cursor: 'pointer', fontSize: 12 }}>Back</button>
             </div>
 
           ) : (
             <>
-              {/* ── Platform Presets ── */}
+              {/* Platform Presets */}
               <p style={sectionHead}>Platform Preset</p>
               <div style={{ border: '1px solid #2a2a2a', borderRadius: 4, overflow: 'hidden', marginBottom: 4 }}>
                 {PRESET_GROUPS.map(group => {
                   const groupPresets = PRESETS.filter(p => p.group === group);
-                  const isOpen = showGroups[group] !== false; // default open
+                  const isOpen = showGroups[group] !== false;
                   return (
                     <div key={group}>
                       <button
@@ -303,18 +524,7 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
                                 key={p.id}
                                 onClick={() => selectPreset(p)}
                                 disabled={status === 'exporting'}
-                                style={{
-                                  background: active ? '#1a3050' : 'transparent',
-                                  border: 'none',
-                                  borderBottom: '1px solid #222',
-                                  borderRight: '1px solid #222',
-                                  padding: '6px 10px',
-                                  textAlign: 'left',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: 1,
-                                }}
+                                style={{ background: active ? '#1a3050' : 'transparent', border: 'none', borderBottom: '1px solid #222', borderRight: '1px solid #222', padding: '6px 10px', textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 1 }}
                               >
                                 <span style={{ color: active ? '#6aadff' : '#bbb', fontSize: 11, fontWeight: active ? 600 : 400 }}>{p.label}</span>
                                 {p.id !== 'custom' && (
@@ -332,7 +542,6 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
                 })}
               </div>
 
-              {/* Custom dimensions (shown when Custom is selected) */}
               {selectedPresetId === 'custom' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
                   <label style={labelStyle}>
@@ -346,7 +555,7 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
                 </div>
               )}
 
-              {/* ── FPS, Quality, Format row ── */}
+              {/* FPS, Quality, Format */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 12 }}>
                 <label style={labelStyle}>
                   Frame Rate
@@ -357,27 +566,32 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
                 <label style={labelStyle}>
                   Quality
                   <select value={quality} onChange={e => setQuality(e.target.value)} disabled={status === 'exporting'} style={{ ...selStyle, marginTop: 4 }}>
-                    {Object.keys(QUALITIES).map(q => <option key={q} value={q}>{q}</option>)}
+                    {QUALITY_PRESETS.map(q => <option key={q.label} value={q.label}>{q.label}</option>)}
                   </select>
                 </label>
                 <label style={labelStyle}>
-                  Codec / Format
-                  {SUPPORTED_MIMES.length === 0 ? (
+                  Format
+                  {availableFormats.length === 0 ? (
                     <span style={{ display: 'block', marginTop: 4, color: '#ff6655', fontSize: 11 }}>Not supported</span>
                   ) : (
-                    <select value={mimeChoice} onChange={e => setMimeChoice(e.target.value)} disabled={status === 'exporting'} style={{ ...selStyle, marginTop: 4 }}>
-                      {SUPPORTED_MIMES.map(m => <option key={m.mime} value={m.mime}>{m.label}</option>)}
+                    <select
+                      value={format?.label ?? ''}
+                      onChange={e => setFormat(availableFormats.find(f => f.label === e.target.value) ?? null)}
+                      disabled={status === 'exporting'}
+                      style={{ ...selStyle, marginTop: 4 }}
+                    >
+                      {availableFormats.map(f => <option key={f.label} value={f.label}>{f.label}</option>)}
                     </select>
                   )}
                 </label>
               </div>
 
-              {/* Summary line */}
+              {/* Summary */}
               <div style={{ marginTop: 10, padding: '6px 8px', background: '#141414', borderRadius: 3, border: '1px solid #2a2a2a', fontSize: 10, color: '#666', lineHeight: '1.6', fontFamily: 'monospace' }}>
                 <span style={{ color: '#888' }}>{outW}×{outH}</span>
                 {preset.ratio && <span> · {preset.ratio}</span>}
                 {' · '}<span style={{ color: '#888' }}>{fps} fps</span>
-                {' · '}{SUPPORTED_MIMES.find(m => m.mime === mimeChoice)?.label ?? mimeChoice}
+                {' · '}{format?.label ?? '–'}
                 {' · '}{compositionDuration}s · {layers.length} layer{layers.length !== 1 ? 's' : ''}
               </div>
 
@@ -397,7 +611,7 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
           )}
         </div>
 
-        {/* Footer buttons */}
+        {/* Footer */}
         {status !== 'done' && status !== 'error' && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid #222', display: 'flex', gap: 8, flexShrink: 0 }}>
             {status === 'exporting' ? (
@@ -411,13 +625,13 @@ export default function ExportModal({ onClose, layers, compositionDuration, comp
                 </button>
                 <button
                   onClick={handleExport}
-                  disabled={layers.length === 0 || SUPPORTED_MIMES.length === 0}
+                  disabled={layers.length === 0 || availableFormats.length === 0}
                   style={{
                     flex: 1, padding: '7px', borderRadius: 4, fontSize: 12, fontWeight: 600,
-                    cursor: (layers.length === 0 || SUPPORTED_MIMES.length === 0) ? 'not-allowed' : 'pointer',
-                    background: (layers.length === 0 || SUPPORTED_MIMES.length === 0) ? '#1a1a2a' : '#1a3a6a',
+                    cursor: layers.length === 0 || availableFormats.length === 0 ? 'not-allowed' : 'pointer',
+                    background: layers.length === 0 || availableFormats.length === 0 ? '#1a1a2a' : '#1a3a6a',
                     border: '1px solid #2a5aaa',
-                    color: (layers.length === 0 || SUPPORTED_MIMES.length === 0) ? '#444' : '#6aadff',
+                    color: layers.length === 0 || availableFormats.length === 0 ? '#444' : '#6aadff',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}
                 >

@@ -1,12 +1,12 @@
-import { Film, Undo2, Redo2, Save, Download, MousePointer2, Type, Hand } from 'lucide-react';
+import { Film, Undo2, Redo2, Save, Download, MousePointer2, Type, Hand, FolderOpen } from 'lucide-react';
 
 const TOOLS = [
-  { id: 'select', icon: MousePointer2, label: 'Selection (V)' },
-  { id: 'text',   icon: Type,          label: 'Text (T)'      },
-  { id: 'hand',   icon: Hand,          label: 'Hand (H)'      },
+  { id: 'select', icon: MousePointer2, label: 'Selection (V)', key: 'v' },
+  { id: 'text',   icon: Type,          label: 'Text (T)',       key: 't' },
+  { id: 'hand',   icon: Hand,          label: 'Hand (H)',       key: 'h' },
 ];
 
-export default function Toolbar({ onExport, onUndo, onRedo, canUndo, canRedo, projectName, setProjectName, activeTool, setActiveTool, fps = 30 }) {
+export default function Toolbar({ onExport, onSave, onLoad, onUndo, onRedo, canUndo, canRedo, projectName, setProjectName, activeTool, setActiveTool, fps = 30 }) {
   return (
     <header style={{
       display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px',
@@ -72,8 +72,15 @@ export default function Toolbar({ onExport, onUndo, onRedo, canUndo, canRedo, pr
 
       <Div />
 
+      {/* Open */}
+      {onLoad && (
+        <button onClick={onLoad} style={{ ...actionBtn, background: '#2a2a2a', color: '#888' }} title="Open project">
+          <FolderOpen size={12} /> Open
+        </button>
+      )}
+
       {/* Save */}
-      <button style={{ ...actionBtn, background: '#2a2a2a', color: '#aaa' }}>
+      <button onClick={onSave} style={{ ...actionBtn, background: '#2a2a2a', color: '#aaa' }} title="Save project (.vfproj)">
         <Save size={12} /> Save
       </button>
 
