@@ -16,7 +16,13 @@ export const COMPOSITION_HEIGHT = 1080;
 export const COMPOSITION_FPS    = 30;
 
 function makeTransform() {
-  return { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0, opacity: 1 };
+  return {
+    x: 0, y: 0,
+    anchorX: 0, anchorY: 0,
+    scaleX: 1, scaleY: 1,
+    rotation: 0, opacity: 1,
+    skewX: 0, skewY: 0,
+  };
 }
 
 function historyReducer(state, action) {
@@ -85,6 +91,12 @@ export default function App() {
       if (e.key === ' ') { e.preventDefault(); setIsPlaying(p => !p); return; }
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); return; }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); return; }
+      // Tool shortcuts (no modifiers)
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key === 'v' || e.key === 'V') { setActiveTool('select'); return; }
+        if (e.key === 't' || e.key === 'T') { setActiveTool('text'); return; }
+        if (e.key === 'h' || e.key === 'H') { setActiveTool('hand'); return; }
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedLayerId) {
         setLayersWithHistory(prev => prev.filter(l => l.id !== selectedLayerId));
         setSelectedLayerId(null);
@@ -103,10 +115,42 @@ export default function App() {
     setLayersWithHistory(prev => prev.filter(l => l.mediaId !== id));
   }
 
+  function makeBaseLayer(overrides) {
+    return {
+      id: crypto.randomUUID(),
+      mediaId: null,
+      name: 'Layer',
+      type: 'video',
+      url: null,
+      trackIndex: layers.length,
+      startTime: 0,
+      duration: 5,
+      trimIn: 0,
+      speed: 1,
+      transform: makeTransform(),
+      effects: [],
+      volume: 1,
+      muted: false,
+      visible: true,
+      locked: false,
+      solo: false,
+      blendMode: 'source-over',
+      // Color correction
+      brightness: 100,
+      contrast: 100,
+      saturation: 100,
+      hue: 0,
+      // Shadow
+      dropShadow: { enabled: false, color: 'rgba(0,0,0,0.8)', blur: 10, offsetX: 5, offsetY: 5 },
+      // Keyframes: { [property]: [{ time, value }] }
+      keyframes: {},
+      ...overrides,
+    };
+  }
+
   function addLayerFromMedia(item) {
     const lastEnd = layers.reduce((acc, l) => Math.max(acc, l.startTime + l.duration), 0);
-    const layer = {
-      id: crypto.randomUUID(),
+    const layer = makeBaseLayer({
       mediaId: item.id,
       name: item.name,
       type: item.type,
@@ -114,40 +158,56 @@ export default function App() {
       trackIndex: layers.length,
       startTime: lastEnd,
       duration: item.duration ?? (item.type === 'photo' ? 5 : 10),
-      trimIn: 0,
-      transform: makeTransform(),
-      effects: [],
-      volume: 1,
-      muted: false,
-      visible: true,
-      solo: false,
-    };
+    });
     setLayersWithHistory(prev => [...prev, layer]);
     setSelectedLayerId(layer.id);
   }
 
   function addTextLayer() {
-    const layer = {
-      id: crypto.randomUUID(),
-      mediaId: null,
+    const layer = makeBaseLayer({
       name: 'Text Layer',
       type: 'text',
-      url: null,
       trackIndex: layers.length,
       startTime: currentTime,
       duration: 5,
-      trimIn: 0,
-      transform: makeTransform(),
-      effects: [],
       volume: 0,
       muted: true,
-      visible: true,
-      solo: false,
       text: 'Edit Text',
       fontSize: 48,
       fontColor: '#ffffff',
       fontFamily: 'Arial',
-    };
+      textAlign: 'center',
+      textBaseline: 'middle',
+      textStroke: 0,
+      textStrokeColor: '#000000',
+      textShadow: false,
+      textShadowColor: 'rgba(0,0,0,0.8)',
+      textShadowBlur: 4,
+      textShadowOffsetX: 2,
+      textShadowOffsetY: 2,
+      lineHeight: 1.2,
+    });
+    setLayersWithHistory(prev => [...prev, layer]);
+    setSelectedLayerId(layer.id);
+  }
+
+  function addShapeLayer(shapeType = 'rectangle') {
+    const layer = makeBaseLayer({
+      name: shapeType === 'rectangle' ? 'Rectangle' : shapeType === 'ellipse' ? 'Ellipse' : 'Shape',
+      type: 'shape',
+      trackIndex: layers.length,
+      startTime: currentTime,
+      duration: 5,
+      volume: 0,
+      muted: true,
+      shapeType,
+      fill: '#4B8BFF',
+      stroke: '',
+      strokeWidth: 0,
+      cornerRadius: 0,
+      shapeWidth: 400,
+      shapeHeight: 300,
+    });
     setLayersWithHistory(prev => [...prev, layer]);
     setSelectedLayerId(layer.id);
   }
@@ -167,12 +227,60 @@ export default function App() {
     );
   }
 
+  function handleSave() {
+    const project = {
+      version: 1,
+      projectName,
+      duration,
+      layers: layers.map(l => ({
+        ...l,
+        // Don't persist blob URLs - they expire; just note the name
+        url: null,
+        mediaId: null,
+      })),
+    };
+    const json = JSON.stringify(project, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectName.replace(/[^a-zA-Z0-9]/g, '_') || 'project'}.vfproj`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleLoad() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.vfproj,.json';
+    input.onchange = e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const project = JSON.parse(ev.target.result);
+          if (project.projectName) setProjectName(project.projectName);
+          if (project.duration)    setDuration(project.duration);
+          if (project.layers)      setLayersWithHistory(project.layers);
+          setSelectedLayerId(null);
+        } catch {
+          alert('Invalid project file');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
   return (
     <div className="flex flex-col w-full h-full" style={{ background: '#0f0f0f' }}>
       <Toolbar
         projectName={projectName}
         setProjectName={setProjectName}
         onExport={() => setShowExport(true)}
+        onSave={handleSave}
+        onLoad={handleLoad}
         onUndo={undo}
         onRedo={redo}
         canUndo={history.length > 0}
@@ -214,6 +322,7 @@ export default function App() {
               onRemove={removeMediaItem}
               onAddToTimeline={addLayerFromMedia}
               onAddTextLayer={addTextLayer}
+              onAddShapeLayer={addShapeLayer}
             />
           )}
           {sidebarTab === 'effects' && (
@@ -232,6 +341,11 @@ export default function App() {
             duration={duration}
             compositionWidth={COMPOSITION_WIDTH}
             compositionHeight={COMPOSITION_HEIGHT}
+            activeTool={activeTool}
+            onAddTextLayer={addTextLayer}
+            selectedLayerId={selectedLayerId}
+            setSelectedLayerId={setSelectedLayerId}
+            onUpdateLayerTransform={updateLayerTransform}
           />
         </div>
 
@@ -241,6 +355,7 @@ export default function App() {
             layer={selectedLayer}
             onUpdateLayer={updateLayer}
             onUpdateTransform={updateLayerTransform}
+            currentTime={currentTime}
           />
         </div>
       </div>
@@ -268,6 +383,7 @@ export default function App() {
           compositionDuration={duration}
           compositionWidth={COMPOSITION_WIDTH}
           compositionHeight={COMPOSITION_HEIGHT}
+          fps={COMPOSITION_FPS}
         />
       )}
     </div>

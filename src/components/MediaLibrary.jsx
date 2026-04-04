@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Upload, Film, Image, Music, Trash2, Plus, Search, Type } from 'lucide-react';
+import { Upload, Film, Image, Music, Trash2, Plus, Search, Type, Square, Circle } from 'lucide-react';
 
 const ACCEPT = 'video/*,image/*,audio/*,.mp4,.mov,.avi,.mkv,.webm,.m4v,.flv,.wmv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.heic,.mp3,.wav,.aac,.ogg,.flac,.m4a,.wma,.opus';
 
@@ -29,7 +29,7 @@ function formatSize(b) {
   return `${(b / 1024 / 1024).toFixed(1)}MB`;
 }
 
-export default function MediaLibrary({ items, onAdd, onRemove, onAddToTimeline, onAddTextLayer }) {
+export default function MediaLibrary({ items, onAdd, onRemove, onAddToTimeline, onAddTextLayer, onAddShapeLayer }) {
   const inputRef = useRef();
   const [dropping, setDropping] = useState(false);
   const [search,   setSearch]   = useState('');
@@ -107,14 +107,28 @@ export default function MediaLibrary({ items, onAdd, onRemove, onAddToTimeline, 
         ))}
       </div>
 
-      {/* Add Text Layer button */}
-      <div style={{ padding: '0 8px 6px', flexShrink: 0 }}>
+      {/* Add Text / Shape Layer buttons */}
+      <div style={{ padding: '0 8px 6px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
         <button
           onClick={onAddTextLayer}
-          style={{ ...smBtn, width: '100%', justifyContent: 'center', background: '#2a2a1a', color: '#CC9944', border: '1px solid #443311' }}
+          style={{ ...smBtn, justifyContent: 'center', background: '#2a2a1a', color: '#CC9944', border: '1px solid #443311' }}
         >
           <Type size={10} /> Add Text Layer
         </button>
+        <div style={{ display: 'flex', gap: 3 }}>
+          <button
+            onClick={() => onAddShapeLayer?.('rectangle')}
+            style={{ ...smBtn, flex: 1, justifyContent: 'center', background: '#1a2a2a', color: '#44AACC', border: '1px solid #114433' }}
+          >
+            <Square size={10} /> Rectangle
+          </button>
+          <button
+            onClick={() => onAddShapeLayer?.('ellipse')}
+            style={{ ...smBtn, flex: 1, justifyContent: 'center', background: '#1a2a2a', color: '#44AACC', border: '1px solid #114433' }}
+          >
+            <Circle size={10} /> Ellipse
+          </button>
+        </div>
       </div>
 
       {/* Drop zone / file list */}

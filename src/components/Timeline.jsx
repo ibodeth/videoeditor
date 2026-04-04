@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Film, Image, Music2, Type, Eye, EyeOff, ZoomIn, ZoomOut, Scissors, Trash2, Copy } from 'lucide-react';
+import { Film, Image, Music2, Type, Eye, EyeOff, ZoomIn, ZoomOut, Scissors, Trash2, Copy, Square, Lock, Unlock } from 'lucide-react';
 
 const HEADER_W  = 160;  // left layer header width in px
 const ROW_H     = 28;   // px per layer row
@@ -19,6 +19,7 @@ function layerColor(type) {
   if (type === 'video') return '#5533CC';
   if (type === 'photo') return '#0078A8';
   if (type === 'audio') return '#007755';
+  if (type === 'shape') return '#228844';
   return '#CC6600'; // text
 }
 
@@ -27,6 +28,7 @@ function LayerIcon({ type }) {
   if (type === 'video') return <Film size={s} />;
   if (type === 'photo') return <Image size={s} />;
   if (type === 'audio') return <Music2 size={s} />;
+  if (type === 'shape') return <Square size={s} />;
   return <Type size={s} />;
 }
 
@@ -34,7 +36,7 @@ export default function Timeline({
   layers, setLayers,
   selectedLayerId, setSelectedLayerId,
   currentTime, setCurrentTime,
-  duration, setDuration,
+  duration,
   mediaItems, onAddLayerFromMedia,
 }) {
   const [pxPerSec, setPxPerSec] = useState(60);
@@ -199,7 +201,7 @@ export default function Timeline({
       {/* ── Main scrollable area ── */}
       <div
         ref={timelineRef}
-        style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', position: 'relative' }}
+        style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', position: 'relative', outline: dragOver ? '1px dashed #4B8BFF' : 'none' }}
         onDragOver={e => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
@@ -288,6 +290,14 @@ export default function Timeline({
                   >
                     {layer.visible ? <Eye size={10} /> : <EyeOff size={10} />}
                   </button>
+                  {/* Lock toggle */}
+                  <button
+                    onClick={e => { e.stopPropagation(); setLayers(prev => prev.map(l => l.id === layer.id ? { ...l, locked: !l.locked } : l)); }}
+                    style={{ ...iconBtn, color: layer.locked ? '#ffaa44' : '#333', flexShrink: 0, padding: 2 }}
+                    title={layer.locked ? 'Unlock layer' : 'Lock layer'}
+                  >
+                    {layer.locked ? <Lock size={9} /> : <Unlock size={9} />}
+                  </button>
                 </div>
 
                 {/* Clip track area */}
@@ -302,6 +312,7 @@ export default function Timeline({
                     }}
                     onMouseDown={e => {
                       if (e.button !== 0) return;
+                      if (layer.locked) return; // locked layers can't be moved
                       e.preventDefault(); e.stopPropagation();
                       setSelectedLayerId(layer.id);
                       dragRef.current = {
@@ -318,6 +329,7 @@ export default function Timeline({
                       className="ae-clip-trim-handle ae-clip-trim-left"
                       onMouseDown={e => {
                         if (e.button !== 0) return;
+                        if (layer.locked) return;
                         e.preventDefault(); e.stopPropagation();
                         dragRef.current = {
                           type: 'trimLeft', layerId: layer.id,
@@ -337,6 +349,7 @@ export default function Timeline({
                       className="ae-clip-trim-handle ae-clip-trim-right"
                       onMouseDown={e => {
                         if (e.button !== 0) return;
+                        if (layer.locked) return;
                         e.preventDefault(); e.stopPropagation();
                         dragRef.current = {
                           type: 'trimRight', layerId: layer.id,
