@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { Film, Image, Music2, Trash2, Plus, ZoomIn, ZoomOut, Scissors, Clock } from 'lucide-react';
 
 function formatTime(secs) {
@@ -16,16 +16,13 @@ function ClipIcon({ type }) {
 
 const TRACK_LABELS = ['Video', 'Photo', 'Audio'];
 
-const DEFAULT_CLIP_WIDTH = 120; // px
 const CLIP_HEIGHT = 44;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 4;
 
 export default function Timeline({ tracks, setTracks, mediaItems, selectedClipId, setSelectedClipId, currentTime }) {
   const [zoom, setZoom] = useState(1);
-  const [dragging, setDragging] = useState(null);
   const [dragOver, setDragOver] = useState(null);
-  const rulerRef = useRef();
   const tracksRef = useRef();
 
   const totalDurationPx = 3000 * zoom;
@@ -90,8 +87,6 @@ export default function Timeline({ tracks, setTracks, mediaItems, selectedClipId
       return next;
     });
   }
-
-  const clipWidth = (duration) => Math.max(DEFAULT_CLIP_WIDTH * zoom * (duration / 10), 60);
 
   // Ruler ticks
   const totalSecs = 120; // 2 min timeline

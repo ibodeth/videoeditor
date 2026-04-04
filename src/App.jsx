@@ -1,26 +1,62 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useReducer } from 'react';
 import './App.css';
 
 import Toolbar from './components/Toolbar.jsx';
 import MediaLibrary from './components/MediaLibrary.jsx';
-import EffectsPanel, { EFFECTS } from './components/EffectsPanel.jsx';
+import EffectsPanel from './components/EffectsPanel.jsx';
+import { EFFECTS } from './components/effects.js';
 import VideoPreview from './components/VideoPreview.jsx';
 import Timeline from './components/Timeline.jsx';
 import ExportModal from './components/ExportModal.jsx';
 
-import { Library, Sparkles, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Library, Sparkles } from 'lucide-react';
 
 const SIDEBAR_TABS = [
   { id: 'media',   icon: Library,   label: 'Media'   },
   { id: 'effects', icon: Sparkles,  label: 'Effects' },
 ];
 
-const INITIAL_TRACKS = [[], [], []]; // video, photo, audio
+// Reducer manages tracks + undo/redo history without stale closure issues
+function historyReducer(state, action) {
+  switch (action.type) {
+    case 'SET_TRACKS': {
+      const next = typeof action.payload === 'function'
+        ? action.payload(state.tracks)
+        : action.payload;
+      return {
+        ...state,
+        tracks: next,
+        history: [...state.history.slice(-30), state.tracks],
+        future: [],
+      };
+    }
+    case 'UNDO':
+      if (state.history.length === 0) return state;
+      return {
+        ...state,
+        tracks: state.history[state.history.length - 1],
+        history: state.history.slice(0, -1),
+        future: [state.tracks, ...state.future],
+      };
+    case 'REDO':
+      if (state.future.length === 0) return state;
+      return {
+        ...state,
+        tracks: state.future[0],
+        future: state.future.slice(1),
+        history: [...state.history, state.tracks],
+      };
+    default:
+      return state;
+  }
+}
+
+const INITIAL_STATE = { tracks: [[], [], []], history: [], future: [] };
 
 export default function App() {
   const [projectName, setProjectName] = useState('Untitled Project');
   const [mediaItems, setMediaItems] = useState([]);
-  const [tracks, setTracks] = useState(INITIAL_TRACKS);
+  const [{ tracks, history, future }, dispatch] = useReducer(historyReducer, INITIAL_STATE);
   const [selectedClipId, setSelectedClipId] = useState(null);
   const [activeEffect, setActiveEffect] = useState(EFFECTS[0]);
   const [brightness, setBrightness] = useState(100);
@@ -32,44 +68,14 @@ export default function App() {
   const [showExport, setShowExport] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
 
-  // History for undo/redo
-  const [history, setHistory] = useState([]);
-  const [future, setFuture] = useState([]);
-
-  function pushHistory(state) {
-    setHistory(h => [...h.slice(-30), state]);
-    setFuture([]);
-  }
-
-  function undo() {
-    if (history.length === 0) return;
-    const prev = history[history.length - 1];
-    setFuture(f => [tracks, ...f]);
-    setTracks(prev);
-    setHistory(h => h.slice(0, -1));
-  }
-
-  function redo() {
-    if (future.length === 0) return;
-    const next = future[0];
-    setHistory(h => [...h, tracks]);
-    setTracks(next);
-    setFuture(f => f.slice(1));
-  }
-
-  // Wrap setTracks to also push history
   const setTracksWithHistory = useCallback((updater) => {
-    setTracks(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      setHistory(h => [...h.slice(-30), prev]);
-      setFuture([]);
-      return next;
-    });
-  // setTracks, setHistory, setFuture are stable React state setters
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setTracks, setHistory, setFuture]);
+    dispatch({ type: 'SET_TRACKS', payload: updater });
+  }, []);
 
-  // Keyboard shortcuts
+  const undo = useCallback(() => dispatch({ type: 'UNDO' }), []);
+  const redo = useCallback(() => dispatch({ type: 'REDO' }), []);
+
+  // Keyboard shortcuts — stable undo/redo from useCallback allow this to run only once
   useEffect(() => {
     function handleKey(e) {
       if (e.target.tagName === 'INPUT') return;
@@ -78,9 +84,8 @@ export default function App() {
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [history, future, tracks]);
+  }, [undo, redo]);
 
-  // Find active/selected clip
   const selectedClip = selectedClipId
     ? tracks.flat().find(c => c.id === selectedClipId) || null
     : null;
@@ -91,7 +96,6 @@ export default function App() {
 
   function removeMediaItem(id) {
     setMediaItems(prev => prev.filter(m => m.id !== id));
-    // Remove clips using this media
     setTracksWithHistory(prev =>
       prev.map(track => track.filter(c => c.mediaId !== id))
     );
@@ -101,7 +105,6 @@ export default function App() {
 
   return (
     <div className="flex flex-col w-full h-full">
-      {/* Toolbar */}
       <Toolbar
         projectName={projectName}
         setProjectName={setProjectName}
@@ -112,7 +115,6 @@ export default function App() {
         canRedo={future.length > 0}
       />
 
-      {/* Main content */}
       <div className="flex flex-1 min-h-0">
         {/* Sidebar tab strip */}
         <div className="flex flex-col items-center gap-1 py-3 px-1.5 bg-[#0e0e16] border-r border-white/6 shrink-0">
@@ -164,9 +166,9 @@ export default function App() {
 
         {/* Center: preview + timeline */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Preview */}
           <div className="flex-1 min-h-0">
             <VideoPreview
+              key={previewClip?.id ?? 'empty'}
               clip={previewClip}
               effect={activeEffect}
               brightness={brightness}
@@ -177,8 +179,6 @@ export default function App() {
               currentTime={currentTime}
             />
           </div>
-
-          {/* Timeline */}
           <div className="h-52 shrink-0">
             <Timeline
               tracks={tracks}
@@ -192,12 +192,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* Export Modal */}
       {showExport && (
-        <ExportModal
-          onClose={() => setShowExport(false)}
-          tracks={tracks}
-        />
+        <ExportModal onClose={() => setShowExport(false)} />
       )}
     </div>
   );

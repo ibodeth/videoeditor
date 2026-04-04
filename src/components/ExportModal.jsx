@@ -10,7 +10,7 @@ const RESOLUTIONS = [
 const FORMATS = ['MP4', 'WebM', 'MOV', 'AVI'];
 const QUALITIES = ['High', 'Medium', 'Low'];
 
-export default function ExportModal({ onClose, tracks }) {
+export default function ExportModal({ onClose }) {
   const [resolution, setResolution] = useState('1080p');
   const [format, setFormat] = useState('MP4');
   const [quality, setQuality] = useState('High');

@@ -41,15 +41,9 @@ export default function VideoPreview({ clip, effect, brightness, contrast, satur
   const [volume, setVolume] = useState(1);
   const [duration, setDuration] = useState(0);
   const [localTime, setLocalTime] = useState(0);
-  const [fullscreen, setFullscreen] = useState(false);
   const containerRef = useRef();
 
   const filterStyle = buildFilter(effect, brightness, contrast, saturation, opacity);
-
-  useEffect(() => {
-    setPlaying(false);
-    setLocalTime(0);
-  }, [clip]);
 
   useEffect(() => {
     if (videoRef.current && Math.abs(videoRef.current.currentTime - currentTime) > 0.5) {
@@ -88,10 +82,8 @@ export default function VideoPreview({ clip, effect, brightness, contrast, satur
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
       containerRef.current.requestFullscreen?.();
-      setFullscreen(true);
     } else {
       document.exitFullscreen?.();
-      setFullscreen(false);
     }
   }
 
