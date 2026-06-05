@@ -2,6 +2,8 @@
 
 An open-source, browser-based video editor with a modern, soft, and flexible UI.
 
+> **Note:** This is a lightweight browser-based React video editor.
+
 ## Features
 
 - 🎬 **Multi-track Timeline** — Video, Photo, and Audio tracks with drag-and-drop
