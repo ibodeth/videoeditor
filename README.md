@@ -1,37 +1,29 @@
-# VideoForge — Simple Video Editor
+# VideoForge
 
-An open-source, browser-based video editor with a modern, soft, and flexible UI.
+A lightweight, browser-based multi-track video editor.
 
-> **Note:** This is a lightweight browser-based React video editor.
-
-## Features
-
-- 🎬 **Multi-track Timeline** — Video, Photo, and Audio tracks with drag-and-drop
-- 🖼️ **Universal Media Support** — All video (MP4, MOV, AVI, MKV, WebM…), photo (JPG, PNG, GIF, WebP, HEIC…), and audio (MP3, WAV, AAC, OGG, FLAC…) formats
-- ✨ **24 Special Effects** — Filters (B&W, Sepia, Vintage, Neon…), Adjustments (Bright, Contrast, Blur…), and Creative (Sunset, Ocean, Cyberpunk, Dreamy…)
-- 🎛️ **Manual Adjustments** — Fine-tune Brightness, Contrast, Saturation, and Opacity with sliders
-- ✂️ **Clip Tools** — Split clips at playhead, remove clips, undo/redo (Ctrl+Z/Y)
-- 🔍 **Zoomable Timeline** — Zoom from 0.5× to 4× for precise editing
-- 📤 **Export Options** — Choose resolution (4K/1080p/720p/480p), format (MP4/WebM/MOV/AVI), and quality
-- 🌙 **Dark Mode UI** — Elegant dark theme with soft purple accents
-
-## Getting Started
-
-```bash
-npm install
-npm run dev
-```
-
-Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-## Build for Production
-
-```bash
-npm run build
-```
+## How it Works
+The application renders an interactive timeline built in React, allowing users to import video, audio, and photo assets. Clips are manipulated directly in the browser via native timeline components, and CSS/canvas filters are applied to add creative effects before exporting projects through customizable settings.
 
 ## Tech Stack
+- **Languages/Frameworks:** React 19, Vite 8, Tailwind CSS v4, TypeScript
+- **Services/Libraries:** Lucide React
+- **Infrastructure:** Node.js
 
-- **React 19** + **Vite 8**
-- **Tailwind CSS v4**
-- **Lucide React** icons
+## Local Setup
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/ibodeth/videoeditor.git
+   cd videoeditor
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## License
+MIT
